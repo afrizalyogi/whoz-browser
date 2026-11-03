@@ -9,6 +9,9 @@ We aim to reply within 7 days and to ship a fix for confirmed issues as soon as 
 
 ## What Whoz does to limit risk
 
-- Web pages can send exactly one message to Whoz (`drag`, to move the window). Every other command is accepted only from the built-in `ui.html` view.
-- Text inserted into the UI (page titles, URLs) is escaped before it reaches JavaScript.
+- Web pages can send exactly one message to Whoz (`drag`, to move the window). Toolbar commands are accepted only from the built-in `ui.html` view.
+- `whoz://` pages (settings, history, bookmarks, downloads, extensions) talk to Whoz through `https://whoz.localhost/api/`. Requests need an `x-whoz` header, which forces a CORS preflight that Whoz never approves, and a matching `Origin`, so other sites cannot call it. Whoz pages refuse to be framed.
+- Text inserted into the UI (page titles, URLs) is escaped before it reaches JavaScript or HTML.
 - `javascript:` typed in the address bar is searched, not executed.
+- Extensions are downloaded only from Google's Chrome Web Store update server over HTTPS, or loaded from a folder you pick. Extensions you install can read and change the pages they ask for, as in any browser; install only ones you trust.
+- Sync writes `whoz-sync.json` (bookmarks, history, settings) unencrypted to the folder you choose. Pick a folder only you can read. Passwords and cookies are never synced.

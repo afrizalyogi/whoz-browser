@@ -11,49 +11,56 @@ if (-not $Exe -or -not (Test-Path $Exe)) { throw "whoz.exe tidak ditemukan. Jala
 # Each test: id, title, steps, expect. Optional: clip (copied to clipboard), relaunch (Whoz is closed in the steps
 # and reopened before you judge), memory (records RAM, no question).
 $tests = @(
-    @{ id = 'A1'; title = 'Start'; steps = @('Lihat window Whoz yang baru terbuka.'); expect = 'Google terbuka. Tidak ada title bar, toolbar, atau tab. Hanya garis tipis di tepi atas dan kiri.' }
+    @{ id = 'A1'; title = 'Start'; steps = @('Lihat window Whoz yang baru terbuka.'); expect = 'Google terbuka penuh. Tidak ada title bar, toolbar, atau tab. Hanya garis tipis di tepi atas dan kiri.' }
 
-    @{ id = 'B1'; title = 'Header muncul saat hover'; steps = @('Arahkan mouse ke tepi paling atas window (1-4 px) dan diam sebentar.'); expect = 'Header muncul: judul halaman, ikon cari, +, empat kotak, minimize, maximize, close.' }
-    @{ id = 'B2'; title = 'Header hilang sendiri'; steps = @('Setelah header muncul, pindahkan mouse ke tengah halaman dan tunggu 1 detik.', 'Klik link di bagian atas halaman (mis. "Gmail" di pojok kanan atas Google).'); expect = 'Header hilang dalam +/- 0,5 detik. Link di bawah bekas header bisa diklik.' }
-    @{ id = 'B3'; title = 'Tombol maximize / restore'; steps = @('Munculkan header, klik maximize.', 'Munculkan lagi, klik restore.'); expect = 'Window maximize lalu kembali. Ikon tombol berubah sesuai status.' }
-    @{ id = 'B4'; title = 'Double-click header'; steps = @('Double-click area kosong di header.', 'Ulangi sekali lagi.'); expect = 'Maximize, lalu restore.' }
-    @{ id = 'B5'; title = 'Geser window'; steps = @('Drag area kosong di header.', 'Tahan Alt lalu drag di mana saja di halaman.'); expect = 'Window ikut bergeser di kedua cara.' }
-    @{ id = 'B6'; title = 'Tombol minimize'; steps = @('Munculkan header, klik minimize.', 'Buka lagi dari taskbar.'); expect = 'Window minimize. Setelah dibuka, halaman masih sama.' }
-    @{ id = 'B7'; title = 'Resize window'; steps = @('Saat tidak maximize: tarik tepi kiri, kanan, bawah, dan pojok.', 'Arahkan ke tepi paling atas sampai kursor jadi panah resize, lalu tarik.'); expect = 'Semua tepi bisa resize. Tulis di catatan apa yang terjadi di tepi atas.' }
+    @{ id = 'B1'; title = 'Toolbar muncul saat hover'; steps = @('Arahkan mouse ke tepi paling atas window dan diam sebentar.'); expect = 'Toolbar muncul: back, forward, reload, kolom alamat (gembok + domain tebal), bintang, menu (...), minimize, maximize, close.' }
+    @{ id = 'B2'; title = 'Toolbar hilang sendiri'; steps = @('Pindahkan mouse ke tengah halaman, tunggu 1 detik.', 'Klik link di bagian atas halaman (mis. "Gmail").'); expect = 'Toolbar hilang. Link di bawah bekas toolbar bisa diklik.' }
+    @{ id = 'B3'; title = 'Maximize / restore / double-click'; steps = @('Klik maximize, lalu restore.', 'Double-click area kosong toolbar dua kali.'); expect = 'Window maximize dan kembali; ikon berubah.' }
+    @{ id = 'B4'; title = 'Geser dan resize window'; steps = @('Drag area kosong toolbar. Alt+drag di halaman.', 'Tarik tepi kiri, kanan, bawah, pojok, dan tepi atas.'); expect = 'Window bergeser dan bisa di-resize dari semua tepi. Tulis catatan untuk tepi atas.' }
+    @{ id = 'B5'; title = 'Back / forward / reload'; steps = @('Buka example.com lalu klik "More information".', 'Klik back, forward, reload di toolbar.'); expect = 'Tombol aktif/nonaktif sesuai riwayat. Saat loading, reload jadi tombol stop.' }
+    @{ id = 'B6'; title = 'Toolbar selalu tampil'; steps = @('Tekan Ctrl+Shift+B.', 'Tekan Ctrl+Shift+B lagi.'); expect = 'Pertama: toolbar dan sidebar tetap tampil, halaman bergeser memberi ruang. Kedua: kembali auto-hide.' }
 
-    @{ id = 'C1'; title = 'Sidebar tab muncul saat hover'; steps = @('Arahkan mouse ke tepi paling kiri (bukan dekat atas) dan diam sebentar.'); expect = 'Sidebar tab muncul di kiri bersama header.' }
-    @{ id = 'C2'; title = 'Sidebar tidak muncul kalau cuma lewat'; steps = @('Gerakkan mouse cepat melewati tepi kiri, misalnya menuju border untuk resize.'); expect = 'Sidebar tidak muncul kalau mouse hanya lewat cepat.' }
-    @{ id = 'C3'; title = 'Sidebar hilang sendiri'; steps = @('Dengan sidebar terbuka, pindahkan mouse ke tengah halaman.'); expect = 'Sidebar dan header hilang.' }
-    @{ id = 'C4'; title = 'Tab baru'; steps = @('Tekan Ctrl+T, ketik: rust lang, tekan Enter.', 'Munculkan sidebar.'); expect = 'Tab baru berisi hasil pencarian Google. Sidebar menampilkan 2 tab, tab aktif ter-highlight.' }
-    @{ id = 'C5'; title = 'Pindah tab'; steps = @('Klik tab pertama di sidebar.', 'Coba Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+1, Ctrl+9.'); expect = 'Setiap cara pindah ke tab yang benar.' }
-    @{ id = 'C6'; title = 'Tutup tab'; steps = @('Buka beberapa tab dengan Ctrl+T (sisakan minimal 2).', 'Tutup satu dengan tombol x di sidebar, satu dengan klik tengah, satu dengan Ctrl+W.'); expect = 'Tab tertutup sesuai yang dipilih. Setelah menutup tab aktif, kembali ke tab terakhir yang dipakai.' }
-    @{ id = 'C7'; title = 'Tab di header'; steps = @('Munculkan header, klik ikon empat kotak.', 'Hover tepi atas, lalu hover tepi kiri.', 'Klik ikon empat kotak lagi.'); expect = 'Tab pindah ke header. Tepi kiri tidak membuka sidebar. Klik kedua mengembalikan tab ke kiri.' }
-    @{ id = 'C8'; title = 'Pilihan posisi tab tersimpan'; steps = @('Pindahkan tab ke header (ikon empat kotak).', 'Tutup Whoz dengan Alt+F4. Script akan membukanya lagi.', 'Setelah terbuka: hover tepi atas. Lalu kembalikan tab ke kiri.'); expect = 'Setelah dibuka ulang, tab tetap di header.'; relaunch = $true }
+    @{ id = 'C1'; title = 'Sidebar muncul / hilang'; steps = @('Arahkan mouse ke tepi kiri (bukan dekat atas), diam sebentar.', 'Gerakkan cepat melewati tepi kiri.', 'Pindah ke tengah halaman.'); expect = 'Hover lama: sidebar muncul. Lewat cepat: tidak muncul. Ke tengah: hilang.' }
+    @{ id = 'C2'; title = 'Resize sidebar'; steps = @('Tekan Ctrl+Shift+B (toolbar selalu tampil).', 'Drag tepi kanan sidebar ke kanan lalu ke kiri.', 'Tekan Ctrl+Shift+B lagi.'); expect = 'Sidebar ikut lebar mouse (180-480 px), halaman menyesuaikan. Garis biru muncul saat drag.' }
+    @{ id = 'C3'; title = 'Tab baru dan favicon'; steps = @('Ctrl+T, ketik: rust lang, Enter.', 'Munculkan sidebar.'); expect = 'Tab baru dengan hasil pencarian. Spinner saat loading, lalu favicon. Tab aktif menonjol.' }
+    @{ id = 'C4'; title = 'Pindah tab'; steps = @('Klik tab lain di sidebar.', 'Coba Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+1, Ctrl+9.'); expect = 'Semua cara pindah ke tab yang benar.' }
+    @{ id = 'C5'; title = 'Drag reorder tab'; steps = @('Buka 3 tab. Drag satu tab ke atas/bawah di sidebar.'); expect = 'Urutan tab berubah dan tetap setelah dilepas.' }
+    @{ id = 'C6'; title = 'Menu klik kanan tab'; steps = @('Klik kanan sebuah tab.', 'Coba Pin, lalu Unpin. Duplicate. Close other tabs.'); expect = 'Pin: tab jadi ikon di atas daftar. Duplicate: salinan tab. Close other: sisa tab itu dan tab pinned.' }
+    @{ id = 'C7'; title = 'Tutup dan buka lagi tab'; steps = @('Tutup tab dengan x, klik tengah, Ctrl+W.', 'Tekan Ctrl+Shift+T.'); expect = 'Tab tertutup; Ctrl+Shift+T membuka lagi tab terakhir yang ditutup.' }
+    @{ id = 'C8'; title = 'Tab di atas'; steps = @('Menu (...) > Move tabs to the top.', 'Hover tepi atas, lalu tepi kiri.', 'Menu > Move tabs to the side.'); expect = 'Baris tab di atas toolbar. Tepi kiri tidak membuka sidebar. Lalu kembali ke samping.' }
+    @{ id = 'C9'; title = 'Session restore'; steps = @('Buka 3 tab, pin satu.', 'Tutup Whoz dengan Alt+F4. Script akan membukanya lagi.'); expect = 'Tab, tab pinned, dan ukuran window kembali seperti semula.'; relaunch = $true }
 
-    @{ id = 'D1'; title = 'Address bar'; steps = @('Tekan Ctrl+L.', 'Ketik: example.com, tekan Enter.'); expect = 'Bar muncul dengan URL terseleksi. Tab yang sama membuka Example Domain.' }
-    @{ id = 'D2'; title = 'Filter tab'; steps = @('Buka 2-3 tab berbeda.', 'Tekan Ctrl+L, ketik sebagian judul salah satu tab, tekan panah bawah lalu Enter.'); expect = 'Daftar tersaring, Enter pindah ke tab itu.' }
-    @{ id = 'D3'; title = 'Tutup address bar'; steps = @('Ctrl+L lalu Esc.', 'Ctrl+L lalu klik di halaman.'); expect = 'Bar tertutup di kedua cara, halaman tetap bisa diketik/diklik.' }
-    @{ id = 'D4'; title = 'Tombol cari dan + di header'; steps = @('Klik ikon cari di header.', 'Esc, lalu klik ikon +.'); expect = 'Ikon cari membuka bar berisi URL sekarang. Ikon + membuka bar kosong untuk tab baru.' }
-    @{ id = 'D5'; title = 'Shortcut lain address bar'; steps = @('Coba Alt+D, F6, Ctrl+Space (Esc di antaranya).'); expect = 'Ketiganya membuka address bar.' }
+    @{ id = 'D1'; title = 'Address bar'; steps = @('Klik kolom alamat (atau Ctrl+L).', 'Ketik: example.com, Enter.'); expect = 'Bar mengambang dengan URL terseleksi. Example Domain terbuka di tab yang sama.' }
+    @{ id = 'D2'; title = 'Saran address bar'; steps = @('Ctrl+L, ketik sebagian nama situs yang pernah dibuka atau judul tab lain.', 'Panah bawah lalu Enter.'); expect = 'Muncul saran: Search, tab terbuka (Switch to tab), bookmark, history.' }
+    @{ id = 'D3'; title = 'Tutup address bar'; steps = @('Ctrl+L lalu Esc. Ctrl+L lalu klik halaman.', 'Coba Alt+D, F6, Ctrl+Space.'); expect = 'Bar tertutup; ketiga shortcut membuka bar.' }
 
-    @{ id = 'E1'; title = 'Link target=_blank jadi tab'; steps = @('URL sudah disalin. Ctrl+L, Ctrl+V, Enter.', 'Klik link "link".'); expect = 'Example Domain terbuka di tab baru.'; clip = 'data:text/html,<a href="https://example.com" target="_blank">link</a>' }
-    @{ id = 'E2'; title = 'Popup menutup diri'; steps = @('URL sudah disalin. Ctrl+L, Ctrl+V, Enter.', 'Klik tombol "popup", tunggu 2 detik.'); expect = 'Tab baru muncul, lalu tertutup sendiri dan kembali ke tab tombol.'; clip = 'data:text/html,<button onclick="w=open(''about:blank'');setTimeout(()=>w.close(),2000)">popup</button>' }
-    @{ id = 'E3'; title = 'Login lewat popup (opsional)'; steps = @('Buka situs dengan tombol "Sign in with Google" (mis. canva.com) dan login.'); expect = 'Popup login terbuka sebagai tab, setelah login kembali ke situs dalam keadaan login.' }
+    @{ id = 'E1'; title = 'Bookmark'; steps = @('Buka github.com, tekan Ctrl+D.', 'Ganti nama, isi folder "Dev", Enter.', 'Klik bintang lagi, klik Remove.'); expect = 'Popover bookmark muncul di bawah bintang; bintang biru saat tersimpan, kosong setelah Remove.' }
+    @{ id = 'E2'; title = 'Halaman bookmarks'; steps = @('Tambahkan 2 bookmark. Tekan Ctrl+Shift+O.', 'Edit satu, hapus satu. Klik "Import from Chrome".'); expect = 'whoz://bookmarks terbuka, dikelompokkan per folder. Edit/hapus jalan. Import menampilkan jumlah yang diimpor (atau pesan bila Chrome tidak ada).' }
+    @{ id = 'E3'; title = 'History'; steps = @('Tekan Ctrl+H. Cari sebuah situs. Hapus satu entri (x).'); expect = 'Riwayat per hari, pencarian jalan, entri hilang setelah x.' }
+    @{ id = 'E4'; title = 'Clear browsing data'; steps = @('Ctrl+Shift+Delete. Pilih "Last hour", hanya centang Browsing history, klik Clear data.'); expect = 'Toast "Browsing data cleared". History satu jam terakhir hilang.' }
 
-    @{ id = 'F1'; title = 'F11 fullscreen'; steps = @('Tekan F11, hover tepi atas.', 'Tekan F11 lagi.'); expect = 'Fullscreen tanpa header (hover tidak memunculkan apa pun). F11 kedua kembali normal.' }
-    @{ id = 'F2'; title = 'Fullscreen video'; steps = @('Buka video YouTube, tekan f di player.', 'Tekan Esc, lalu hover tepi atas.'); expect = 'Video memenuhi layar. Esc kembali ke window biasa, header bisa muncul lagi.' }
-    @{ id = 'F3'; title = 'Audio di tab tersembunyi'; steps = @('Putar video YouTube, lalu Ctrl+T dan buka situs lain.'); expect = 'Suara tetap jalan saat tab YouTube tidak terlihat.' }
+    @{ id = 'F1'; title = 'Download'; steps = @('URL sudah disalin. Ctrl+L, Ctrl+V, Enter.', 'Lihat tombol download di toolbar, klik.', 'Klik ikon folder pada item.'); expect = 'Toast "Downloading...", tombol download dengan progress, daftar dengan progress bar, Explorer membuka file.'; clip = 'https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-amd64.zip' }
+    @{ id = 'F2'; title = 'Halaman downloads'; steps = @('Tekan Ctrl+J.'); expect = 'whoz://downloads menampilkan file dengan Open, Show in folder, Remove.' }
 
-    @{ id = 'G1'; title = 'Download file'; steps = @('URL sudah disalin. Ctrl+L, Ctrl+V, Enter.'); expect = 'Tulis di catatan apa yang terlihat (popup download? file masuk folder Downloads?).'; clip = 'https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-amd64.zip' }
-    @{ id = 'G2'; title = 'Izin kamera / mikrofon'; steps = @('Buka https://webcamtests.com dan klik tes kamera.'); expect = 'Tulis di catatan: muncul prompt izin atau tidak, kamera jalan atau tidak.' }
-    @{ id = 'G3'; title = 'Login tersimpan'; steps = @('Login ke situs apa saja (mis. github.com).', 'Tutup Whoz dengan Alt+F4. Script akan membukanya lagi.', 'Buka situs itu lagi.'); expect = 'Masih dalam keadaan login.'; relaunch = $true }
-    @{ id = 'G4'; title = 'Shortcut bawaan'; steps = @('Coba Alt+Kiri / Alt+Kanan, F5, Ctrl+F, Ctrl+Plus / Ctrl+Minus / Ctrl+0.'); expect = 'Back, forward, reload, find, zoom berfungsi.' }
-    @{ id = 'G5'; title = 'Tema gelap / terang (opsional)'; steps = @('Ganti tema Windows (Settings > Personalization > Colors), lalu munculkan header.'); expect = 'Warna header dan sidebar mengikuti tema.' }
+    @{ id = 'G1'; title = 'Install ekstensi dari Chrome Web Store'; steps = @('URL sudah disalin. Ctrl+L, Ctrl+V, Enter.', 'Klik "Add to Whoz" di kolom alamat, tunggu.'); expect = 'Toast "Installing..." lalu "Added uBlock Origin Lite". Ikon puzzle muncul di toolbar.'; clip = 'https://chromewebstore.google.com/detail/ublock-origin-lite/ddkjiahejlhfcafbddmgiahcphecmpfh' }
+    @{ id = 'G2'; title = 'Popup ekstensi'; steps = @('Klik ikon puzzle, pilih uBlock Origin Lite.', 'Klik di halaman.'); expect = 'Popup ekstensi muncul di bawah toolbar dengan ukuran pas. Klik di luar menutupnya. Tulis catatan bila tidak berfungsi.' }
+    @{ id = 'G3'; title = 'Efek ekstensi'; steps = @('Buka situs berita yang banyak iklan.'); expect = 'Iklan terblokir. Tulis catatan kalau tidak.' }
+    @{ id = 'G4'; title = 'Kelola ekstensi'; steps = @('Menu > Extensions. Matikan toggle, nyalakan lagi. Klik Options.'); expect = 'Toggle mengubah status; Options membuka halaman pengaturan ekstensi di tab baru.' }
+
+    @{ id = 'H1'; title = 'Developer tools'; steps = @('Tekan F12. Tutup. Tekan Ctrl+Shift+I. Menu > Developer tools.'); expect = 'DevTools Chromium terbuka untuk halaman aktif.' }
+    @{ id = 'H2'; title = 'Settings'; steps = @('Menu > Settings.', 'Ganti Theme ke Dark lalu System. Ganti search engine ke DuckDuckGo, lalu cari sesuatu di address bar.'); expect = 'Tema toolbar dan halaman berubah langsung. Pencarian memakai DuckDuckGo.' }
+    @{ id = 'H3'; title = 'Sync folder'; steps = @('Settings > Sync > Choose folder..., pilih folder OneDrive/Google Drive (atau folder kosong apa saja).', 'Klik Sync now.'); expect = 'Status "Last synced just now". File whoz-sync.json ada di folder itu.' }
+    @{ id = 'H4'; title = 'Zoom'; steps = @('Ctrl+Plus dua kali, lihat kolom alamat.', 'Menu > Zoom +/-. Klik angka % di kolom alamat.'); expect = 'Angka % muncul di kolom alamat; klik mengembalikan ke 100%.' }
+    @{ id = 'H5'; title = 'Private window'; steps = @('Tekan Ctrl+Shift+N.', 'Buka sebuah situs, tutup window private itu.', 'Kembali ke window utama, Ctrl+H.'); expect = 'Window baru dengan label Private dan warna ungu. Situs itu tidak ada di history.' }
+    @{ id = 'H6'; title = 'Window baru'; steps = @('Tekan Ctrl+N, lalu tutup window baru.'); expect = 'Window kedua terbuka di home page; window pertama tetap.' }
+
+    @{ id = 'I1'; title = 'Popup jadi tab'; steps = @('URL sudah disalin. Ctrl+L, Ctrl+V, Enter.', 'Klik tombol "popup", tunggu 2 detik.'); expect = 'Tab baru muncul, lalu tertutup sendiri dan kembali ke tab tombol.'; clip = 'data:text/html,<button onclick="w=open(''about:blank'');setTimeout(()=>w.close(),2000)">popup</button>' }
+    @{ id = 'I2'; title = 'F11 dan video fullscreen'; steps = @('F11, hover atas, F11 lagi.', 'YouTube: tekan f di player, lalu Esc.'); expect = 'Fullscreen tanpa toolbar; Esc kembali normal.' }
+    @{ id = 'I3'; title = 'Audio dan mute tab'; steps = @('Putar video YouTube, buka tab lain.', 'Munculkan sidebar, klik ikon speaker pada tab YouTube.'); expect = 'Suara jalan di tab tersembunyi; ikon speaker muncul, klik membisukan.' }
 
     @{ id = 'M1'; title = 'Pemakaian RAM'; memory = $true }
 
-    @{ id = 'Q1'; title = 'Tutup tab terakhir'; steps = @('Tekan Ctrl+W sampai semua tab tertutup.'); expect = 'Whoz keluar saat tab terakhir ditutup.' }
-    @{ id = 'Q2'; title = 'Tombol close'; steps = @('(Script membuka Whoz lagi.) Munculkan header, klik close.'); expect = 'Whoz keluar.' }
+    @{ id = 'Q1'; title = 'Tutup Whoz'; steps = @('Munculkan toolbar, klik close.'); expect = 'Whoz keluar.' }
 )
 
 function Start-Whoz {
@@ -76,9 +83,10 @@ $dpi = (Get-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' -ErrorActio
 $commit = try { git -C $root rev-parse --short HEAD 2>$null } catch { $null }
 $os = Get-CimInstance Win32_OperatingSystem
 
-# Start from the default layout so C7/C8 behave as described.
-New-Item -ItemType Directory "$env:LOCALAPPDATA\WhozBrowser" -Force | Out-Null
-Set-Content "$env:LOCALAPPDATA\WhozBrowser\tabs" 'left'
+# Start from default settings so the steps match. Your settings and tabs are kept in settings.json.bak.
+$data = "$env:LOCALAPPDATA\WhozBrowser"
+New-Item -ItemType Directory $data -Force | Out-Null
+if (Test-Path "$data\settings.json") { Move-Item "$data\settings.json" "$data\settings.json.bak" -Force }
 
 Write-Host "Whoz manual test: $($tests.Count) langkah. Jawab p (pass), f (fail), s (skip), q (berhenti dan simpan)." -ForegroundColor Green
 Write-Host "Whoz: $Exe"

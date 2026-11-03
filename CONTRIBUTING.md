@@ -17,12 +17,18 @@ cargo clippy --all-targets -- -D warnings
 cargo build --release     # the binary you ship
 ```
 
-Code lives in two files:
+Code lives in a few files:
 
-- `src/main.rs`: window, tabs, shortcuts, URL parsing. Keep new logic small and add a unit test for anything that parses or decides (see the `tests` module).
-- `src/ui.html`: header, tab list and address bar. Plain HTML/CSS/JS, no build step, no dependencies.
+- `src/main.rs`: window, tabs, toolbar commands, extensions, downloads, the `whoz://` page API, shortcuts and URL parsing.
+- `src/store.rs`: settings, bookmarks, history, downloads and folder sync (plain JSON files).
+- `src/ext.rs`: Chrome Web Store download, CRX unpacking, manifest reading.
+- `src/win.rs`: small Win32 helpers.
+- `src/ui.html`: toolbar, tabs, address bar, menus and popovers. Plain HTML/CSS/JS, no build step.
+- `src/pages.html`: `whoz://settings`, `history`, `bookmarks`, `downloads`, `extensions`.
 
-The overlay is clipped with `SetWindowRgn` to the rectangles `ui.html` reports in its `rgn` message. If you add a visible element, add its rectangle in `clip()`, or it will not show and will not receive clicks.
+Add a unit test for anything that parses, merges or decides (see the `tests` modules).
+
+The overlay is clipped with `SetWindowRgn` to the shapes `ui.html` reports in its `rgn` message. A new floating element needs the `pop` class (or its own entry in `clip()`), or it will not show and will not receive clicks.
 
 ## Pull requests
 
@@ -31,4 +37,4 @@ The overlay is clipped with `SetWindowRgn` to the rectangles `ui.html` reports i
 - Say how you tested it by hand. `scripts\manual-test.ps1` walks through every check and writes a report you can paste into the pull request.
 - Screenshots or a short GIF for anything visual.
 
-By contributing you agree your work is dual-licensed under MIT and Apache-2.0, like the rest of the project.
+By contributing you agree your work is licensed under the GNU General Public License v3.0 or later, like the rest of the project.

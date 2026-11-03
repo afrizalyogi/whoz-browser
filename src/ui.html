@@ -1,152 +1,608 @@
 <!doctype html>
 <meta charset="utf-8">
 <style>
-  :root { color-scheme: light dark; font: 12px "Segoe UI", system-ui, sans-serif; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: Canvas; color: CanvasText; user-select: none; cursor: default; }
-  /* Rust shows only the regions clip() reports; everything else is the page underneath. */
-  #h { position: fixed; inset: 0 0 auto 0; height: 36px; display: flex; border-bottom: 1px solid #8884; box-sizing: border-box; }
-  #s { position: fixed; left: 0; top: 36px; bottom: 0; width: 240px; overflow-y: auto; border-right: 1px solid #8884; box-sizing: border-box; padding: 4px; }
-  #m { flex: 1; min-width: 0; display: flex; align-items: center; overflow: hidden; }
-  #title { padding: 0 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; pointer-events: none; }
-  body.top #title, body.top #s { display: none; }
-  button { all: unset; width: 46px; display: grid; place-items: center; font: 10px "Segoe Fluent Icons", "Segoe MDL2 Assets"; }
-  button:hover { background: #8883; }
-  #close:hover { background: #c42b1c; color: #fff; }
-  #rz { position: fixed; inset: 0 0 auto 0; height: 4px; cursor: n-resize; }
-  body.max #rz { display: none; }
-  .t { display: flex; align-items: center; height: 30px; padding-left: 10px; border-radius: 6px; }
-  .t span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .t:hover { background: #8882; }
-  .t.a { background: #8884; }
-  .t i { visibility: hidden; font: normal 9px "Segoe Fluent Icons", "Segoe MDL2 Assets"; width: 28px; align-self: stretch; display: grid; place-items: center; }
-  .t:hover i, .t.a i { visibility: visible; }
-  .t i:hover { background: #8884; border-radius: 6px; }
-  body.top .t { flex: 0 1 200px; min-width: 60px; height: 28px; margin-left: 4px; }
-  #p { display: none; position: fixed; top: 44px; left: 50%; transform: translateX(-50%); width: min(600px, calc(100vw - 32px)); border: 1px solid #8886; box-sizing: border-box; background: Canvas; }
-  #q { all: unset; box-sizing: border-box; width: 100%; height: 46px; padding: 0 14px; font-size: 15px; user-select: text; cursor: text; }
-  #l { max-height: 320px; overflow-y: auto; }
-  #l:not(:empty) { border-top: 1px solid #8884; }
-  #l div { height: 32px; line-height: 32px; padding: 0 14px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #l div.a { box-shadow: inset 3px 0 Highlight; }
-  #l div.s { background: Highlight; color: HighlightText; }
-  #l small { opacity: .6; margin-left: 8px; }
-</style>
-<div id="h">
-  <div id="m"><div id="title"></div></div>
-  <button id="go" title="Address bar (Ctrl+L)">&#xE721;</button>
-  <button id="new" title="New tab (Ctrl+T)">&#xE710;</button>
-  <button id="layout" title="Tabs on the left / on top">&#xE8A9;</button>
-  <button id="min" title="Minimize">&#xE921;</button>
-  <button id="max" title="Maximize">&#xE922;</button>
-  <button id="close" title="Close">&#xE8BB;</button>
-</div>
-<div id="s"></div>
-<div id="rz"></div>
-<div id="p"><input id="q" spellcheck="false" autocomplete="off" placeholder="Search or type URL"><div id="l"></div></div>
-<script>
-  // Rust calls render([{t, a}], tabsLeft, maximized, fullscreen), pal(url, [tab urls]), closePal().
-  // Messages back: "rgn\nx,y,w,h;..." (device px), "tab\ni", "x\ni", "go\ntext", "hide", "ready",
-  // and the header buttons: "new" "pal" "layout" "min" "max" "close" "drag" "resize".
-  const $ = id => document.getElementById(id), post = m => ipc.postMessage(m);
-  const HEAD = 36, SIDE = 240, STRIP = 4;
-  const q = $('q'), l = $('l'), p = $('p');
-  let tabs = [], left = true, full = false, st = 0, showT = 0, hideT, lastRgn;
-  let palOpen = false, shown = [], sel = -1, typed = false, lastDown = 0;
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfd; --side: #f2f2f5; --raise: #ffffff; --fill: rgba(0,0,0,.05); --fill2: rgba(0,0,0,.09);
+    --line: rgba(0,0,0,.1); --text: #1d1d1f; --dim: #6e6e73; --accent: #0071e3; --on-accent: #fff; --danger: #e5484d;
+    --ease: cubic-bezier(.2,.8,.2,1); --r: 10px;
+    font: 13px/1.35 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1e1e20; --side: #19191b; --raise: #2a2a2d; --fill: rgba(255,255,255,.07); --fill2: rgba(255,255,255,.12);
+      --line: rgba(255,255,255,.1); --text: #f5f5f7; --dim: #98989d; --accent: #0a84ff; }
+  }
+  body.private { --accent: #8f5cf7; --bg: #2a2140; --side: #231b36; --raise: #352a4f; --text: #f3effb; --dim: #b3a8cc;
+    --fill: rgba(255,255,255,.08); --fill2: rgba(255,255,255,.14); --line: rgba(255,255,255,.12); color-scheme: dark; }
+  @media (prefers-contrast: more) { :root { --line: rgba(127,127,127,.6); --dim: inherit; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; color: var(--text); user-select: none; cursor: default; background: transparent; }
+  button { all: unset; display: grid; place-items: center; height: 28px; min-width: 28px; border-radius: 7px; color: inherit; transition: transform .12s var(--ease), background-color .12s; }
+  button:hover { background: var(--fill); }
+  button:active { transform: scale(.94); background: var(--fill2); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button[disabled] { opacity: .35; pointer-events: none; }
+  svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  img.fav { width: 16px; height: 16px; border-radius: 3px; flex: none; }
 
-  // st: 0 = only edge strips, 1 = header, 2 = header + sidebar.
+  /* Header: in "top" layout a tab row sits above the toolbar. */
+  #h { position: fixed; inset: 0 0 auto 0; background: var(--bg); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; }
+  #tabrow { height: 36px; display: none; align-items: center; padding-left: 6px; }
+  body.top #tabrow { display: flex; }
+  /* 36 + 40 incl. the 1px border, matching HEAD / HEAD_TOP in main.rs. */
+  #bar { height: 39px; display: flex; align-items: center; gap: 2px; padding: 0 4px 0 6px; }
+  .drag { flex: 1; align-self: stretch; min-width: 12px; }
+  #addr { flex: 0 1 620px; min-width: 120px; height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 4px 0 10px; border-radius: 9px; background: var(--fill); color: var(--dim); transition: background-color .15s; }
+  #addr:hover { background: var(--fill2); }
+  #addr .u { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .01em; }
+  #addr .u b { color: var(--text); font-weight: 500; }
+  #addr button { height: 24px; min-width: 24px; }
+  #star.on { color: var(--accent); } #star.on svg { fill: currentColor; }
+  #zoomb { font-size: 11px; padding: 0 6px; }
+  #getext { height: 24px; padding: 0 10px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 12px; border-radius: 12px; }
+  #getext:hover { background: var(--accent); filter: brightness(1.08); }
+  #badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--accent); color: #fff; margin-right: 4px; }
+  #wc { display: flex; align-self: stretch; margin-left: 4px; }
+  #wc button { height: auto; width: 44px; border-radius: 0; }
+  #wc button:active { transform: none; }
+  #wc #close:hover { background: #c42b1c; color: #fff; }
+  #wc svg { width: 10px; height: 10px; stroke-width: 1.1; }
+  #dlb { position: relative; }
+  #dlb i { position: absolute; left: 5px; right: 5px; bottom: 3px; height: 2px; border-radius: 1px; background: var(--accent); transform-origin: left; }
+  #dlb.idle i { display: none; }
+
+  /* Sidebar */
+  #s { position: fixed; left: 0; bottom: 0; width: var(--side-w); background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+  #pins { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; padding: 8px 8px 0; }
+  #pins:empty { display: none; }
+  #list { flex: 1; overflow-y: auto; padding: 8px 6px; scrollbar-width: thin; }
+  #s footer { padding: 6px; border-top: 1px solid var(--line); }
+  #s footer button { width: 100%; justify-content: start; display: flex; gap: 8px; padding: 0 10px; height: 32px; color: var(--dim); }
+  #sr { position: absolute; top: 0; bottom: 0; right: -3px; width: 6px; cursor: ew-resize; z-index: 2; }
+  #sr:hover, #sr.on { background: linear-gradient(90deg, transparent 2px, var(--accent) 2px, var(--accent) 4px, transparent 4px); }
+
+  .t { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 4px 0 10px; border-radius: 8px; margin-bottom: 2px; position: relative; transition: background-color .12s, transform .2s var(--ease); }
+  .t .n { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .t:hover { background: var(--fill); }
+  .t.a { background: var(--raise); box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0,0,0,.06); }
+  .t.a .n { font-weight: 500; }
+  .t button { height: 24px; min-width: 24px; visibility: hidden; color: var(--dim); }
+  .t:hover .x, .t.a .x { visibility: visible; }
+  .t .au { visibility: visible; }
+  .t.dragging { opacity: .6; transform: scale(.98); z-index: 3; }
+  .t.p { justify-content: center; padding: 0; height: 40px; margin: 0; background: var(--fill); }
+  .t.p.a { background: var(--raise); }
+  .t.p .n, .t.p .x { display: none; }
+  .t.p .au { position: absolute; right: 0; top: 0; height: 18px; min-width: 18px; }
+  .t.p .au svg { width: 11px; height: 11px; }
+  body.top .t { flex: 0 1 220px; min-width: 56px; height: 30px; margin: 0 2px 0 0; }
+  body.top .t.p { flex: none; width: 38px; min-width: 38px; height: 30px; }
+  body.top #tabs { display: flex; flex: 0 1 auto; min-width: 0; overflow: hidden; align-items: center; }
+  .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--fill2); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; margin: 1px; }
+  @keyframes spin { to { transform: rotate(1turn); } }
+
+  /* Floating surfaces: popovers, palette, menus, toast. Rust clips the view to their exact shape. */
+  .pop { position: fixed; display: none; background: var(--raise); border: 1px solid var(--line); border-radius: 12px; padding: 6px; z-index: 10; min-width: 220px;
+    transform-origin: var(--o, top right); animation: pop .22s var(--ease); }
+  .pop.open { display: block; }
+  @keyframes pop { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
+  .mi { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 7px; white-space: nowrap; }
+  .mi:hover, .mi.s { background: var(--accent); color: var(--on-accent); }
+  .mi:hover kbd, .mi.s kbd, .mi:hover small, .mi.s small { color: inherit; opacity: .8; }
+  .mi span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .mi kbd { font: 12px inherit; font-family: inherit; color: var(--dim); }
+  .mi svg { flex: none; }
+  .mi.dis { opacity: .4; pointer-events: none; }
+  .sep { height: 1px; background: var(--line); margin: 5px 4px; }
+  .row { display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; height: 34px; }
+  .row span { flex: 1; }
+  .row button { min-width: 32px; }
+  .row .val { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+
+  #p { top: 6px; left: 50%; width: min(680px, calc(100vw - 24px)); transform: translateX(-50%); padding: 0; --o: top center; animation: none; }
+  #p.open { animation: palin .22s var(--ease); }
+  @keyframes palin { from { opacity: 0; transform: translateX(-50%) scale(.98); } }
+  #pq { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 48px; color: var(--dim); }
+  #q { all: unset; flex: 1; font-size: 16px; color: var(--text); user-select: text; cursor: text; letter-spacing: -.01em; }
+  #q::placeholder { color: var(--dim); }
+  #l { max-height: 400px; overflow-y: auto; padding: 0 6px 6px; }
+  #l:empty { display: none; }
+  #l .mi { height: 38px; }
+  #l .mi small { color: var(--dim); margin-left: 6px; }
+  #l .mi .k { font-size: 11px; color: var(--dim); }
+
+  #star-pop { width: 300px; padding: 14px; --o: top right; }
+  #star-pop h3, #dl-pop h3 { margin: 0 0 10px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  label.f { display: block; font-size: 11px; color: var(--dim); margin: 8px 0 4px; }
+  .in { all: unset; display: block; width: 100%; box-sizing: border-box; height: 30px; padding: 0 10px; border-radius: 7px; background: var(--fill); color: var(--text); user-select: text; cursor: text; }
+  .in:focus { box-shadow: 0 0 0 2px var(--accent); }
+  .btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .btn { height: 28px; padding: 0 14px; border-radius: 7px; background: var(--fill); font-weight: 500; }
+  .btn.pri { background: var(--accent); color: var(--on-accent); }
+  .btn.pri:hover { background: var(--accent); filter: brightness(1.08); }
+
+  #dl-pop { width: 340px; padding: 12px 6px 6px; }
+  #dl-pop h3 { padding: 0 8px; }
+  .dl { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; }
+  .dl:hover { background: var(--fill); }
+  .dl div { flex: 1; min-width: 0; }
+  .dl b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dl small { color: var(--dim); font-size: 11px; }
+  .dl progress { width: 100%; height: 4px; appearance: none; border: 0; border-radius: 2px; background: var(--fill2); display: block; margin-top: 4px; }
+  .dl progress::-webkit-progress-bar { background: var(--fill2); border-radius: 2px; }
+  .dl progress::-webkit-progress-value { background: var(--accent); border-radius: 2px; }
+  .dl.failed small { color: var(--danger); }
+
+  #ext-pop .mi img { width: 16px; height: 16px; }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: none; max-width: min(520px, calc(100vw - 40px)); padding: 9px 16px; border-radius: 20px;
+    background: var(--text); color: var(--bg); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: palin .25s var(--ease); z-index: 20; }
+  #toast.open { display: block; }
+  #rz { position: fixed; inset: 0 0 auto 0; height: 4px; cursor: n-resize; z-index: 30; }
+  body.max #rz, body.full #rz { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, .pop, #p.open, #toast { animation: none !important; transition: none !important; }
+    .spin { animation: spin 2s linear infinite !important; }
+  }
+</style>
+<svg style="display:none">
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 16 16"><path d="m6 3 5 5-5 5"/></symbol>
+  <symbol id="i-reload" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5.5a2.5 2.5 0 0 1 5 0V7"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 7.5v3M8 5.3v.1"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.2"/><path d="m10.2 10.2 3 3"/></symbol>
+  <symbol id="i-star" viewBox="0 0 16 16"><path d="m8 2.5 1.7 3.5 3.8.5-2.8 2.6.7 3.8L8 11.1l-3.4 1.8.7-3.8-2.8-2.6 3.8-.5z"/></symbol>
+  <symbol id="i-dl" viewBox="0 0 16 16"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".6"/><circle cx="8" cy="8" r=".6"/><circle cx="12.5" cy="8" r=".6"/></symbol>
+  <symbol id="i-puzzle" viewBox="0 0 16 16"><path d="M6 3.5a1.5 1.5 0 0 1 3 0V5h2.5a1 1 0 0 1 1 1v2.5H11a1.5 1.5 0 0 0 0 3h1.5V13a1 1 0 0 1-1 1H9v-1.5a1.5 1.5 0 0 0-3 0V14H3.5a1 1 0 0 1-1-1v-2.5H4a1.5 1.5 0 0 0 0-3H2.5V6a1 1 0 0 1 1-1H6z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M2.5 8h11M8 2.5c1.6 1.7 2.2 3.5 2.2 5.5S9.6 11.8 8 13.5C6.4 11.8 5.8 10 5.8 8S6.4 4.2 8 2.5"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 16 16"><path d="M3 6.5h2L8 4v8L5 9.5H3zM10.5 6a3 3 0 0 1 0 4M12 4.5a5 5 0 0 1 0 7"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 16 16"><path d="M3 6.5h2L8 4v8L5 9.5H3zM10.5 6.5l3 3M13.5 6.5l-3 3"/></symbol>
+  <symbol id="i-min" viewBox="0 0 10 10"><path d="M0 5h10"/></symbol>
+  <symbol id="i-max" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></symbol>
+  <symbol id="i-restore" viewBox="0 0 10 10"><rect x=".5" y="2.5" width="7" height="7"/><path d="M2.5 2.5V.5h7v7h-2"/></symbol>
+  <symbol id="i-close" viewBox="0 0 10 10"><path d="m0 0 10 10M10 0 0 10"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 16 16"><path d="M2.5 4.5a1 1 0 0 1 1-1h3l1.5 1.5h4.5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></symbol>
+  <symbol id="i-tab" viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="9" rx="1.5"/><path d="M2.5 6.5h11"/></symbol>
+</svg>
+
+<div id="h">
+  <div id="tabrow"><div id="tabs"></div><button id="newtop" title="New tab (Ctrl+T)"><svg><use href="#i-plus"/></svg></button><div class="drag" id="dragtop"></div></div>
+  <div id="bar">
+    <button id="back" title="Back (Alt+Left)"><svg><use href="#i-back"/></svg></button>
+    <button id="fwd" title="Forward (Alt+Right)"><svg><use href="#i-fwd"/></svg></button>
+    <button id="reload" title="Reload (F5)"><svg><use href="#i-reload"/></svg></button>
+    <div class="drag" id="drag1"></div>
+    <span id="badge" hidden>Private</span>
+    <div id="addr" title="Search or type a URL (Ctrl+L)">
+      <svg id="lock"><use href="#i-lock"/></svg>
+      <div class="u" id="u"></div>
+      <button id="zoomb" hidden title="Reset zoom (Ctrl+0)"></button>
+      <button id="getext" hidden title="Install this extension">Add to Whoz</button>
+      <button id="star" title="Bookmark this page (Ctrl+D)"><svg><use href="#i-star"/></svg></button>
+    </div>
+    <div class="drag" id="drag2"></div>
+    <button id="extb" title="Extensions" hidden><svg><use href="#i-puzzle"/></svg></button>
+    <button id="dlb" class="idle" title="Downloads (Ctrl+J)" hidden><svg><use href="#i-dl"/></svg><i></i></button>
+    <button id="menub" title="Menu"><svg><use href="#i-more"/></svg></button>
+    <div id="wc">
+      <button id="min" title="Minimize"><svg><use href="#i-min"/></svg></button>
+      <button id="max" title="Maximize"><svg><use href="#i-max"/></svg></button>
+      <button id="close" title="Close"><svg><use href="#i-close"/></svg></button>
+    </div>
+  </div>
+</div>
+<div id="s">
+  <div id="pins"></div>
+  <div id="list"></div>
+  <footer><button id="newside"><svg><use href="#i-plus"/></svg>New tab</button></footer>
+  <div id="sr" title="Drag to resize"></div>
+</div>
+<div id="rz"></div>
+
+<div class="pop" id="p"><div id="pq"><svg><use href="#i-search"/></svg><input id="q" spellcheck="false" autocomplete="off" placeholder="Search or type a URL"></div><div id="l"></div></div>
+<div class="pop" id="menu"></div>
+<div class="pop" id="ctx" style="--o: top left"></div>
+<div class="pop" id="star-pop">
+  <h3 id="star-h">Bookmark added</h3>
+  <label class="f" for="bt">Name</label><input class="in" id="bt" spellcheck="false">
+  <label class="f" for="bf">Folder</label><input class="in" id="bf" list="folders" placeholder="None" spellcheck="false"><datalist id="folders"></datalist>
+  <div class="btns"><button class="btn" id="bdel">Remove</button><button class="btn pri" id="bok">Done</button></div>
+</div>
+<div class="pop" id="dl-pop"><h3>Downloads</h3><div id="dls"></div><div class="sep"></div><div class="mi" id="dlall"><svg><use href="#i-folder"/></svg><span>Show all downloads</span><kbd>Ctrl+J</kbd></div></div>
+<div class="pop" id="ext-pop"></div>
+<div id="toast"></div>
+
+<script>
+  // Rust calls render(state), pal(url, isNew, rows), sug(query, rows), closePal(), openStar(), toast(text).
+  // Every message back is "cmd\narg\narg2"; see on_ui() in main.rs.
+  const $ = id => document.getElementById(id), post = m => ipc.postMessage(m);
+  const STRIP = 4;
+  const body = document.body, q = $('q'), l = $('l');
+  let S = { tabs: [], left: true, compact: true, side: 260, dl: { n: 0, list: [] }, exts: [], folders: [] };
+  let st = 0, showT = 0, hideT, lastRgn, toastT, pressAt = 0;
+  let rows = [], sel = -1, palNew = false, open = null, dragging = null, resizing = false, inside = false;
+
+  const head = () => S.left ? 40 : 76;
+  const docked = () => !S.compact && !S.full;
+  const icon = (n, cls) => `<svg${cls ? ` class="${cls}"` : ''}><use href="#i-${n}"/></svg>`;
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+  // st: 0 = edge strips only, 1 = header, 2 = header + sidebar.
+  function level() {
+    if (S.full) return 0;
+    if (docked()) return S.left ? 2 : 1;
+    return st;
+  }
   function clip() {
     const d = devicePixelRatio, r = [];
-    const add = (x, y, w, h) => r.push([x, y, w, h].map(v => Math.round(v * d)).join(','));
-    if (!full) {
-      add(0, 0, innerWidth, st ? HEAD : STRIP);
-      if (left) add(0, 0, st === 2 ? SIDE : STRIP, innerHeight);
+    const add = (x, y, w, h, rad = 0) => r.push([x, y, w, h, rad].map(v => Math.round(v * d)).join(','));
+    const lv = level();
+    if (!S.full) {
+      add(0, 0, innerWidth, lv ? head() : STRIP);
+      if (S.left) lv === 2 ? add(0, head(), S.side, innerHeight - head()) : add(0, 0, STRIP, innerHeight);
     }
-    if (palOpen) { const b = p.getBoundingClientRect(); add(b.x, b.y, b.width, b.height); }
+    for (const e of document.querySelectorAll('.pop.open, #toast.open')) {
+      const b = e.getBoundingClientRect();
+      add(b.x, b.y, b.width, b.height, e.id === 'toast' ? 20 : 12);
+    }
     const s = r.join(';');
     if (s !== lastRgn) post('rgn\n' + (lastRgn = s));
   }
-  const set = n => { if (n !== st) { st = n; clip(); } };
+  function layout() {
+    const lv = level();
+    $('h').style.display = lv ? '' : 'none';
+    $('s').style.display = S.left && lv === 2 ? '' : 'none';
+    $('s').style.top = head() + 'px';
+    body.style.setProperty('--side-w', S.side + 'px');
+    clip();
+  }
+  const set = n => { if (n !== st) { st = n; layout(); } };
 
+  // ---- tabs ----
+  function favicon(t) {
+    if (t.l) return '<i class="spin"></i>';
+    if (t.i) return `<img class="fav" src="${esc(t.i)}" onerror="this.outerHTML='${icon('globe').replace(/"/g, '&quot;')}'">`;
+    return icon('globe');
+  }
   function tabEl(t, i) {
-    const d = document.createElement('div'), s = document.createElement('span'), x = document.createElement('i');
-    d.className = t.a ? 't a' : 't';
-    d.title = s.textContent = t.t;
-    x.innerHTML = '&#xE8BB;';
-    x.onmousedown = e => { e.stopPropagation(); post('x\n' + i); };
-    d.onmousedown = e => post((e.button === 1 ? 'x\n' : 'tab\n') + i);
-    d.append(s, x);
+    const d = document.createElement('div');
+    d.className = 't' + (t.a ? ' a' : '') + (t.p ? ' p' : '');
+    d.title = t.t + (t.u ? '\n' + t.u : '');
+    d.dataset.i = i;
+    d.innerHTML = favicon(t) + `<span class="n">${esc(t.t)}</span>` +
+      (t.au || t.m ? `<button class="au" title="${t.m ? 'Unmute' : 'Mute'} tab">${icon(t.m ? 'mute' : 'vol')}</button>` : '') +
+      `<button class="x" title="Close tab (Ctrl+W)">${icon('x')}</button>`;
+    d.querySelector('.x').onpointerdown = e => { e.stopPropagation(); if (e.button === 0) post('x\n' + i); };
+    const au = d.querySelector('.au');
+    if (au) au.onpointerdown = e => { e.stopPropagation(); post('tabctx\nmute\n' + i); };
+    d.onpointerdown = e => tabDown(e, d, i, t);
+    d.oncontextmenu = e => { e.preventDefault(); tabMenu(e, i, t); };
     return d;
   }
+  // Activate on press (no click delay); a drag past 5px reorders within the same group.
+  function tabDown(e, d, i, t) {
+    if (e.button === 1) { e.preventDefault(); return post('x\n' + i); }
+    if (e.button !== 0) return;
+    closeAll();
+    // render() waits while a tab is held, so switching tabs does not rebuild the element being dragged.
+    dragging = d;
+    if (!t.a) post('tab\n' + i);
+    const x0 = e.clientX, y0 = e.clientY;
+    let to = i, moved = false;
+    d.setPointerCapture(e.pointerId);
+    d.onpointermove = m => {
+      if (!moved && Math.hypot(m.clientX - x0, m.clientY - y0) < 5) return;
+      moved = true; d.classList.add('dragging');
+      const over = document.elementsFromPoint(m.clientX, m.clientY).find(x => x.classList?.contains('t') && x !== d);
+      if (over && over.classList.contains('p') === d.classList.contains('p')) {
+        const j = +over.dataset.i, r = over.getBoundingClientRect();
+        const after = S.left && !t.p ? m.clientY > r.y + r.height / 2 : m.clientX > r.x + r.width / 2;
+        over.parentNode.insertBefore(d, after ? over.nextSibling : over);
+        to = j + (after && j < i ? 1 : 0) - (!after && j > i ? 1 : 0);
+      }
+    };
+    d.onpointerup = d.onpointercancel = () => {
+      d.onpointermove = d.onpointerup = d.onpointercancel = null;
+      d.classList.remove('dragging'); dragging = null;
+      if (moved && to !== i) post(`mv\n${i}\n${to}`);
+      else render(S);
+    };
+  }
+  function tabMenu(e, i, t) {
+    menuAt($('ctx'), e.clientX, e.clientY, [
+      ['New tab', 'Ctrl+T', () => post('new')],
+      0,
+      ['Reload', 'F5', () => post('tabctx\nreload\n' + i)],
+      ['Duplicate', '', () => post('tabctx\nduplicate\n' + i)],
+      [t.p ? 'Unpin' : 'Pin', '', () => post('tabctx\npin\n' + i)],
+      [t.m ? 'Unmute site' : 'Mute site', '', () => post('tabctx\nmute\n' + i)],
+      0,
+      ['Close', 'Ctrl+W', () => post('tabctx\nclose\n' + i)],
+      ['Close other tabs', '', () => post('tabctx\nothers\n' + i), S.tabs.length < 2],
+      [S.left ? 'Close tabs below' : 'Close tabs to the right', '', () => post('tabctx\nbelow\n' + i), i === S.tabs.length - 1],
+      ['Reopen closed tab', 'Ctrl+Shift+T', () => post('reopen')],
+    ]);
+  }
 
-  window.render = (t, lft, max, fs) => {
-    tabs = t.map((x, i) => ({ ...x, u: tabs[i]?.u ?? '' })); left = lft; full = fs;
-    if (full) st = 0;
-    document.body.className = (left ? '' : 'top') + (max ? ' max' : '');
-    $('max').innerHTML = max ? '&#xE923;' : '&#xE922;';
-    $('max').title = max ? 'Restore' : 'Maximize';
-    $('title').textContent = tabs.find(t => t.a)?.t ?? '';
-    document.querySelectorAll('.t').forEach(e => e.remove());
-    (left ? $('s') : $('m')).append(...tabs.map(tabEl));
-    if (palOpen) draw(); else clip();
-  };
-
-  // Edge strips open panels after a short hover, so passing over them to reach a resize border does not.
-  onmousemove = e => {
-    if (full || p.contains(e.target)) return;
-    clearTimeout(hideT);
-    const want = left && e.clientX <= STRIP && e.clientY > HEAD ? 2 : Math.max(st, 1);
-    if (want === st) { clearTimeout(showT); showT = 0; }
-    else if (!showT) showT = setTimeout(() => { showT = 0; set(want); }, st ? 0 : 150);
-  };
-  document.addEventListener('mouseout', e => {
-    if (e.relatedTarget) return;
-    clearTimeout(showT); showT = 0;
-    hideT = setTimeout(() => set(0), 400);
-  });
-
-  for (const id of ['new', 'layout', 'min', 'max', 'close']) $(id).onclick = () => { if (id === 'min') set(0); post(id); };
-  $('go').onclick = () => post('pal');
-  // The OS drag loop swallows the second click, so detect double-click by time.
-  $('m').onmousedown = e => {
-    if (e.button !== 0 || e.target !== $('m')) return;
-    post(e.timeStamp - lastDown < 500 ? 'max' : 'drag');
-    lastDown = e.timeStamp;
-  };
-  $('rz').onmousedown = e => { if (e.button === 0) post('resize'); };
-  oncontextmenu = e => { if (e.target !== q) e.preventDefault(); };
-  onresize = clip;
-
-  // Address bar: type a URL or search, or filter open tabs and pick one.
-  function draw() {
-    const f = typed ? q.value.toLowerCase() : '';
-    shown = tabs.map((t, i) => [t, i]).filter(([t]) => !f || (t.t + ' ' + t.u).toLowerCase().includes(f));
-    sel = Math.min(sel, shown.length - 1);
-    l.replaceChildren(...shown.map(([t, i], k) => {
-      const d = document.createElement('div'), s = document.createElement('small');
-      d.textContent = t.t;
-      s.textContent = t.u;
-      d.append(s);
-      d.className = (t.a ? 'a ' : '') + (k === sel ? 's' : '');
-      d.onmousedown = e => { e.preventDefault(); post('tab\n' + i); };
+  // ---- menus ----
+  function menuAt(el, x, y, items, origin) {
+    closeAll();
+    el.replaceChildren(...items.map(it => {
+      if (!it) { const s = document.createElement('div'); s.className = 'sep'; return s; }
+      if (it instanceof HTMLElement) return it;
+      const [label, key, fn, dis, ic] = it, d = document.createElement('div');
+      d.className = 'mi' + (dis ? ' dis' : '');
+      d.innerHTML = (ic || '') + `<span>${esc(label)}</span>` + (key ? `<kbd>${esc(key)}</kbd>` : '');
+      d.onpointerup = e => { if (e.button === 0) { closeAll(); fn(); } };
       return d;
     }));
+    show(el);
+    const b = el.getBoundingClientRect();
+    el.style.left = Math.max(6, Math.min(x, innerWidth - b.width - 6)) + 'px';
+    el.style.top = Math.max(6, Math.min(y, innerHeight - b.height - 6)) + 'px';
+    if (origin) el.style.setProperty('--o', origin);
+    clip();
+  }
+  function anchor(el, btn) {
+    show(el);
+    const r = btn.getBoundingClientRect(), b = el.getBoundingClientRect();
+    el.style.left = Math.max(6, Math.min(r.right - b.width, innerWidth - b.width - 6)) + 'px';
+    el.style.top = r.bottom + 6 + 'px';
+    clip();
+  }
+  function show(el) { open = el; el.classList.add('open'); el.style.left = '-9999px'; el.style.top = '0px'; }
+  function closeAll() {
+    let was = false;
+    for (const e of document.querySelectorAll('.pop.open')) { if (e.id !== 'p') { e.classList.remove('open'); was = true; } }
+    open = null;
+    if (was) clip();
+  }
+  const zoomRow = () => {
+    const r = document.createElement('div');
+    r.className = 'row';
+    r.innerHTML = `<span>Zoom</span><button data-z="-1" title="Zoom out (Ctrl+-)"><svg viewBox="0 0 16 16"><path d="M3 8h10"/></svg></button><span class="val">${S.zoom ?? 100}%</span><button data-z="1" title="Zoom in (Ctrl+=)">${icon('plus')}</button><button data-z="f" title="Full screen (F11)">${icon('tab')}</button>`;
+    for (const b of r.querySelectorAll('button')) b.onpointerup = () => {
+      const z = b.dataset.z;
+      if (z === 'f') { closeAll(); post('full'); } else post('zoom\n' + z);
+    };
+    return r;
+  };
+  function mainMenu() {
+    menuAt($('menu'), 0, 0, [
+      ['New tab', 'Ctrl+T', () => post('new'), 0, icon('plus')],
+      ['New window', 'Ctrl+N', () => post('newwin'), 0, icon('tab')],
+      ['New private window', 'Ctrl+Shift+N', () => post('private'), 0, icon('lock')],
+      0,
+      ['History', 'Ctrl+H', () => post('page\nhistory'), 0, icon('clock')],
+      ['Downloads', 'Ctrl+J', () => post('page\ndownloads'), 0, icon('dl')],
+      ['Bookmarks', 'Ctrl+Shift+O', () => post('page\nbookmarks'), 0, icon('star')],
+      ['Extensions', '', () => post('page\nextensions'), 0, icon('puzzle')],
+      0,
+      zoomRow(),
+      0,
+      ['Print…', 'Ctrl+P', () => post('print')],
+      ['Find on page…', 'Ctrl+F', () => toast('Press Ctrl+F on the page to find text.')],
+      ['Developer tools', 'F12', () => post('devtools')],
+      0,
+      [S.left ? 'Move tabs to the top' : 'Move tabs to the side', '', () => post('layout')],
+      [S.compact ? 'Always show toolbar' : 'Auto-hide toolbar', 'Ctrl+Shift+B', () => post('compact')],
+      ['Settings', '', () => post('page\nsettings'), 0, icon('info')],
+    ]);
+    const b = $('menub').getBoundingClientRect(), m = $('menu');
+    m.style.left = Math.max(6, b.right - m.offsetWidth) + 'px';
+    m.style.top = b.bottom + 6 + 'px';
+    m.style.setProperty('--o', 'top right');
+    clip();
+  }
+
+  // ---- render ----
+  window.render = s => {
+    S = s;
+    body.className = (S.left ? '' : 'top') + (S.max ? ' max' : '') + (S.full ? ' full' : '') + (S.private ? ' private' : '');
+    if (S.full) st = 0;
+    if (dragging) return;
+    $('max').innerHTML = icon(S.max ? 'restore' : 'max');
+    $('max').title = S.max ? 'Restore' : 'Maximize';
+    (S.left ? $('bar') : $('tabrow')).append($('wc'));
+    $('back').disabled = !S.back; $('fwd').disabled = !S.fwd;
+    $('reload').innerHTML = icon(S.loading ? 'x' : 'reload');
+    $('reload').title = S.loading ? 'Stop loading' : 'Reload (F5)';
+    $('badge').hidden = !S.private;
+    // Show the host prominently, the rest dimmed, as the address bar is read at a glance.
+    const m = /^(\w[\w+.-]*:\/\/)([^/?#]*)(.*)$/.exec(S.url || '');
+    $('u').innerHTML = m ? `<b>${esc(m[2])}</b>${esc(m[3].length > 1 ? m[3] : '')}` : esc(S.url || 'Search or type a URL');
+    $('lock').innerHTML = `<use href="#i-${S.secure || S.internal ? 'lock' : 'info'}"/>`;
+    $('lock').style.color = !S.url || S.secure || S.internal ? '' : 'var(--danger)';
+    $('star').classList.toggle('on', !!S.star);
+    $('star').hidden = !S.url || S.internal;
+    $('zoomb').hidden = S.zoom === 100;
+    $('zoomb').textContent = S.zoom + '%';
+    $('getext').hidden = !S.store;
+    $('extb').hidden = !S.exts.length;
+    $('dlb').hidden = !S.dl.list.length;
+    $('dlb').classList.toggle('idle', !S.dl.n);
+    $('dlb').querySelector('i').style.transform = `scaleX(${S.dl.p < 0 ? 1 : S.dl.p})`;
+    $('folders').innerHTML = S.folders.map(f => `<option value="${esc(f)}">`).join('');
+    const els = S.tabs.map(tabEl);
+    for (const e of document.querySelectorAll('.t')) e.remove();
+    if (S.left) {
+      $('pins').append(...els.filter(e => e.classList.contains('p')));
+      $('list').append(...els.filter(e => !e.classList.contains('p')));
+      $('list').querySelector('.a')?.scrollIntoView({ block: 'nearest' });
+    } else $('tabs').append(...els);
+    if ($('dl-pop').classList.contains('open')) drawDownloads();
+    if ($('ext-pop').classList.contains('open')) extMenu();
+    layout();
+  };
+
+  // ---- address bar ----
+  function drawRows() {
+    sel = Math.min(sel, rows.length - 1);
+    const ic = r => r.k === 'tab' ? (r.icon ? `<img class="fav" src="${esc(r.icon)}">` : icon('tab'))
+      : icon({ search: 'search', go: 'globe', bm: 'star', hist: 'clock' }[r.k] || 'globe');
+    l.innerHTML = rows.map((r, k) => `<div class="mi${k === sel ? ' s' : ''}" data-k="${k}">${ic(r)}<span>${esc(r.t)}<small>${esc(r.u)}</small></span>${r.k === 'tab' ? '<span class="k" style="flex:none">Switch to tab</span>' : ''}</div>`).join('');
+    for (const d of l.children) d.onpointerdown = e => { e.preventDefault(); pick(+d.dataset.k); };
     l.querySelector('.s')?.scrollIntoView({ block: 'nearest' });
     clip();
   }
-  window.pal = (url, urls) => { urls.forEach((u, i) => tabs[i] && (tabs[i].u = u)); palOpen = true; p.style.display = 'block'; sel = -1; typed = false; q.value = url; draw(); q.focus(); q.select(); };
-  window.closePal = () => { if (palOpen) { palOpen = false; p.style.display = ''; clip(); } };
-  const dismiss = () => { if (palOpen) { closePal(); post('hide'); } };
-  // Clicking the page moves focus out of this view; clicks inside it (header, tabs) keep the bar open.
-  addEventListener('blur', dismiss);
-  q.oninput = () => { typed = true; sel = -1; draw(); };
+  function pick(k) {
+    const r = rows[k];
+    if (!r) return post('go\n' + q.value);
+    if (r.k === 'tab') post('tab\n' + r.i);
+    else if (r.k === 'search') post('go\n' + r.t);
+    else if (r.k === 'go') post('go\n' + r.t);
+    else post('go\n' + r.u);
+  }
+  window.pal = (url, isNew, r) => {
+    closeAll();
+    palNew = isNew; rows = r; sel = -1;
+    $('p').classList.add('open');
+    q.value = url; q.placeholder = isNew ? 'Search or type a URL to open a new tab' : 'Search or type a URL';
+    drawRows(); q.focus(); q.select();
+  };
+  window.sug = (text, r) => { if (text === q.value) { rows = r; sel = r.length && q.value ? 0 : -1; drawRows(); } };
+  window.closePal = () => { if ($('p').classList.contains('open')) { $('p').classList.remove('open'); clip(); } };
+  const dismiss = () => { if ($('p').classList.contains('open')) { closePal(); post('hide'); } };
+  q.oninput = () => post('q\n' + q.value);
   q.onkeydown = e => {
     if (e.key === 'Escape') dismiss();
-    else if (e.key === 'Enter') post(sel >= 0 ? 'tab\n' + shown[sel][1] : 'go\n' + q.value);
+    else if (e.key === 'Enter') sel >= 0 ? pick(sel) : post('go\n' + q.value);
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      sel = Math.max(-1, Math.min(shown.length - 1, sel + (e.key === 'ArrowDown' ? 1 : -1)));
-      draw();
+      sel = Math.max(-1, Math.min(rows.length - 1, sel + (e.key === 'ArrowDown' ? 1 : -1)));
+      drawRows();
     } else return;
     e.preventDefault();
   };
+
+  // ---- bookmark popover ----
+  window.openStar = () => {
+    closeAll();
+    const b = S.star || { title: '', folder: '' };
+    $('bt').value = b.title; $('bf').value = b.folder;
+    anchor($('star-pop'), $('star'));
+    $('bt').focus(); $('bt').select();
+  };
+  const saveStar = () => { post('bm\n' + JSON.stringify({ title: $('bt').value, folder: $('bf').value.trim() })); closeAll(); post('hide'); };
+  $('bok').onclick = saveStar;
+  $('bdel').onclick = () => { post('unbm'); closeAll(); post('hide'); };
+  for (const i of [$('bt'), $('bf')]) i.onkeydown = e => { if (e.key === 'Enter') saveStar(); if (e.key === 'Escape') { closeAll(); post('hide'); } };
+
+  // ---- downloads popover ----
+  const size = n => n < 0 ? '' : n < 1e6 ? Math.round(n / 1e3) + ' KB' : (n / 1e6).toFixed(n < 1e8 ? 1 : 0) + ' MB';
+  function drawDownloads() {
+    $('dls').innerHTML = S.dl.list.map(d => `<div class="dl ${d.s}" data-id="${d.id}">${icon(d.s === 'failed' ? 'x' : 'dl')}<div><b>${esc(d.n)}</b>` +
+      (d.s === 'progress' ? `<progress max="${Math.max(d.t, 1)}" value="${d.t > 0 ? d.b : ''}"></progress><small>${size(d.b)}${d.t > 0 ? ' of ' + size(d.t) : ''}</small>`
+        : `<small>${d.s === 'failed' ? 'Failed' : size(d.b)}</small>`) +
+      `</div>${d.s === 'progress' ? `<button data-a="cancel" title="Cancel">${icon('x')}</button>` : d.s === 'done' ? `<button data-a="show" title="Show in folder">${icon('folder')}</button>` : `<button data-a="retry" title="Retry">${icon('reload')}</button>`}</div>`).join('');
+    for (const d of $('dls').children) {
+      d.onclick = () => post('dl\nopen\n' + d.dataset.id);
+      d.querySelector('button').onclick = e => { e.stopPropagation(); post(`dl\n${e.currentTarget.dataset.a}\n${d.dataset.id}`); };
+    }
+    clip();
+  }
+  $('dlall').onclick = () => { closeAll(); post('page\ndownloads'); };
+
+  // ---- extensions ----
+  function extMenu() {
+    const items = S.exts.map(x => [x.n, '', () => {
+      const b = $('extb').getBoundingClientRect();
+      post(`ext\n${x.id}\n${b.right},${b.bottom + 6}`);
+    }, !x.p, x.i ? `<img src="${esc(x.i)}">` : icon('puzzle')]);
+    const was = $('ext-pop').classList.contains('open');
+    menuAt($('ext-pop'), 0, 0, [...items, 0, ['Manage extensions', '', () => post('page\nextensions'), 0, icon('info')]]);
+    const b = $('extb').getBoundingClientRect(), m = $('ext-pop');
+    m.style.left = Math.max(6, b.right - m.offsetWidth) + 'px';
+    m.style.top = b.bottom + 6 + 'px';
+    if (was) m.style.animation = 'none';
+    clip();
+  }
+
+  // ---- toast ----
+  window.toast = text => {
+    const t = $('toast');
+    t.textContent = text; t.classList.remove('open'); void t.offsetWidth; t.classList.add('open');
+    clip();
+    clearTimeout(toastT);
+    toastT = setTimeout(() => { t.classList.remove('open'); clip(); }, 3200);
+  };
+
+  // ---- wiring ----
+  const btn = (id, fn) => $(id).onclick = fn;
+  btn('back', () => post('back'));
+  btn('fwd', () => post('fwd'));
+  btn('reload', () => post(S.loading ? 'stop' : 'reload'));
+  btn('newside', () => post('new'));
+  btn('newtop', () => post('new'));
+  btn('star', e => { e.stopPropagation(); post('star'); });
+  btn('zoomb', e => { e.stopPropagation(); post('zoom\n0'); });
+  btn('getext', e => { e.stopPropagation(); post('addext'); });
+  btn('min', () => { set(0); post('min'); });
+  btn('max', () => post('max'));
+  btn('close', () => post('close'));
+  $('addr').onclick = () => post('pal');
+  $('menub').onpointerdown = e => { e.stopPropagation(); $('menu').classList.contains('open') ? closeAll() : mainMenu(); };
+  $('extb').onpointerdown = e => { e.stopPropagation(); $('ext-pop').classList.contains('open') ? closeAll() : extMenu(); };
+  $('dlb').onpointerdown = e => { e.stopPropagation(); if ($('dl-pop').classList.contains('open')) return closeAll(); closeAll(); drawDownloads(); anchor($('dl-pop'), $('dlb')); };
+  // The OS drag loop swallows the second click, so detect double-click by time.
+  for (const id of ['drag1', 'drag2', 'dragtop', 'bar', 'tabrow', 'tabs']) $(id).onpointerdown = e => {
+    if (e.button !== 0 || e.target !== $(id)) return;
+    closeAll();
+    post(e.timeStamp - pressAt < 500 ? 'max' : 'drag');
+    pressAt = e.timeStamp;
+  };
+  $('rz').onpointerdown = e => { if (e.button === 0) post('resize'); };
+  $('sr').onpointerdown = e => {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    resizing = true; $('sr').classList.add('on'); $('sr').setPointerCapture(e.pointerId);
+    let raf = 0;
+    $('sr').onpointermove = m => {
+      S.side = Math.max(180, Math.min(480, Math.round(m.clientX)));
+      body.style.setProperty('--side-w', S.side + 'px');
+      if (!raf) raf = requestAnimationFrame(() => { raf = 0; clip(); post('side\n' + S.side); });
+    };
+    $('sr').onpointerup = () => {
+      $('sr').onpointermove = $('sr').onpointerup = null;
+      resizing = false; $('sr').classList.remove('on');
+      clip(); post(`side\n${S.side}\nsave`);
+    };
+  };
+  oncontextmenu = e => { if (!e.target.matches('input')) e.preventDefault(); };
+  // Popovers scale in, so their first measured box is a little small; measure again once settled.
+  document.addEventListener('animationend', clip);
+  onresize = () => { closeAll(); layout(); };
+  document.addEventListener('pointerdown', e => {
+    if (open && !open.contains(e.target)) closeAll();
+  });
+
+  // Auto-hide: edge strips open panels after a short hover, so passing over them to reach a resize border does not.
+  onmousemove = e => {
+    if (S.full || docked() || resizing) return;
+    clearTimeout(hideT);
+    if ($('p').contains(e.target) || (open && open.contains(e.target))) return;
+    const want = S.left && e.clientX <= STRIP && e.clientY > head() ? 2 : Math.max(st, 1);
+    if (want === st) { clearTimeout(showT); showT = 0; }
+    else if (!showT) showT = setTimeout(() => { showT = 0; set(want); }, st ? 0 : 150);
+  };
+  document.addEventListener('mouseover', () => inside = true);
+  document.addEventListener('mouseout', e => {
+    if (e.relatedTarget) return;
+    inside = false;
+    if (docked() || resizing || dragging) return;
+    clearTimeout(showT); showT = 0;
+    hideT = setTimeout(() => { if (!open && !$('p').classList.contains('open')) set(0); }, 450);
+  });
+  // Clicking the page moves focus out of this view: close whatever floats.
+  addEventListener('blur', () => {
+    dismiss();
+    closeAll();
+    // Clicking a tab moves focus to the page while the pointer is still here: keep the panel then.
+    if (!inside && !docked()) { clearTimeout(hideT); hideT = setTimeout(() => set(0), 450); }
+  });
   post('ready');
 </script>

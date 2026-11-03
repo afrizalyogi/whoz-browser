@@ -1,11 +1,11 @@
 [package]
 name = "whoz-browser"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Afrizal Yogi <afrizalyogi@aryatama.co.id>"]
-license = "MIT OR Apache-2.0"
+license = "GPL-3.0-or-later"
 repository = "https://github.com/afrizalyogi/whoz-browser"
-description = "A minimal Windows browser: the page fills the window, header and tabs auto-hide"
+description = "A minimal Windows browser on WebView2: auto-hiding toolbar, vertical tabs, bookmarks, history, downloads, Chrome Web Store extensions and folder sync"
 readme = "README.md"
 keywords = ["browser", "webview2", "minimal", "windows", "vertical-tabs"]
 categories = ["gui"]
@@ -16,9 +16,22 @@ path = "src/main.rs"
 
 [dependencies]
 tao = "0.37"
-wry = "0.57"
+wry = { version = "0.57", features = ["devtools"] }
 webview2-com = "0.39"
-windows = { version = "0.62", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_System_Com",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 [profile.release]
 opt-level = "s"

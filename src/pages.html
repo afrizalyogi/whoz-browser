@@ -1,0 +1,382 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<link rel="icon" href="data:,">
+<title>Whoz</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f5f7; --card: #fff; --side: #ececf0; --fill: rgba(0,0,0,.05); --fill2: rgba(0,0,0,.09); --line: rgba(0,0,0,.08);
+    --text: #1d1d1f; --dim: #6e6e73; --accent: #0071e3; --danger: #d70015; --ease: cubic-bezier(.2,.8,.2,1);
+    font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161618; --card: #232326; --side: #1c1c1e; --fill: rgba(255,255,255,.07); --fill2: rgba(255,255,255,.12);
+      --line: rgba(255,255,255,.08); --text: #f5f5f7; --dim: #98989d; --accent: #0a84ff; --danger: #ff453a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+  nav { width: 230px; flex: none; padding: 28px 12px; position: sticky; top: 0; height: 100vh; }
+  nav h1 { font-size: 13px; font-weight: 600; color: var(--dim); margin: 0 12px 12px; letter-spacing: .02em; }
+  nav a { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 8px; color: inherit; text-decoration: none; margin-bottom: 2px; transition: background-color .12s; }
+  nav a:hover { background: var(--fill); }
+  nav a.on { background: var(--accent); color: #fff; }
+  svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  main { flex: 1; min-width: 0; padding: 36px 40px 80px; max-width: 860px; }
+  h2 { font: 600 28px/1.1 "Segoe UI Variable Display", "Segoe UI", system-ui; letter-spacing: -.02em; margin: 0 0 6px; }
+  .lead { color: var(--dim); margin: 0 0 24px; max-width: 62ch; }
+  h3 { font-size: 13px; font-weight: 600; color: var(--dim); margin: 28px 4px 8px; letter-spacing: .01em; }
+  .group { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); }
+  .item { display: flex; align-items: center; gap: 14px; min-height: 48px; padding: 8px 16px; position: relative; }
+  .item + .item::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--line); }
+  .item .lbl { flex: 1; min-width: 0; }
+  .item .lbl small { display: block; color: var(--dim); font-size: 12px; margin-top: 1px; overflow-wrap: anywhere; }
+  .item.click { cursor: default; } .item.click:hover { background: var(--fill); }
+  .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  button, .btn { font: inherit; border: 0; height: 30px; padding: 0 14px; border-radius: 8px; background: var(--fill); color: var(--text); font-weight: 500; transition: transform .12s var(--ease), background-color .12s; white-space: nowrap; }
+  button:hover { background: var(--fill2); }
+  button:active { transform: scale(.96); }
+  button.pri { background: var(--accent); color: #fff; }
+  button.pri:hover { filter: brightness(1.08); }
+  button.danger { color: var(--danger); }
+  button.icon { width: 30px; padding: 0; display: grid; place-items: center; background: transparent; color: var(--dim); }
+  button.icon:hover { background: var(--fill); color: var(--text); }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=text], input[type=search], input[type=url], select { font: inherit; height: 32px; padding: 0 10px; border-radius: 8px; border: 0; background: var(--fill); color: var(--text); min-width: 0; }
+  input[type=text]:focus, input[type=search]:focus, input[type=url]:focus, select:focus { outline: 2px solid var(--accent); }
+  select { padding-right: 6px; }
+  .wide { width: min(360px, 50vw); }
+  .search { width: 100%; height: 38px; margin-bottom: 20px; padding-left: 14px; font-size: 15px; }
+  .seg { display: inline-flex; background: var(--fill); border-radius: 9px; padding: 2px; }
+  .seg button { background: transparent; height: 26px; padding: 0 12px; border-radius: 7px; font-weight: 400; }
+  .seg button.on { background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 0 0 .5px var(--line); font-weight: 500; }
+  .sw { position: relative; width: 42px; height: 24px; flex: none; }
+  .sw input { opacity: 0; position: absolute; inset: 0; margin: 0; z-index: 1; }
+  .sw i { position: absolute; inset: 0; border-radius: 12px; background: var(--fill2); transition: background-color .2s var(--ease); }
+  .sw i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .25s var(--ease); }
+  .sw input:checked + i { background: #34c759; }
+  .sw input:checked + i::after { transform: translateX(18px); }
+  .sw input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=range] { accent-color: var(--accent); width: 180px; }
+  input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
+  .checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 16px; padding: 12px 16px; }
+  .checks label { display: flex; gap: 8px; align-items: center; }
+  .fav { width: 20px; height: 20px; border-radius: 5px; background: var(--fill2); display: grid; place-items: center; color: var(--dim); flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .ext-ic { width: 28px; height: 28px; border-radius: 6px; flex: none; }
+  .time { color: var(--dim); font-variant-numeric: tabular-nums; width: 64px; flex: none; font-size: 13px; }
+  .note { color: var(--dim); font-size: 12px; margin: 8px 4px 0; max-width: 70ch; }
+  .note a, .lead a { color: var(--accent); text-decoration: none; }
+  .empty { text-align: center; color: var(--dim); padding: 60px 20px; }
+  .err { color: var(--danger); }
+  progress { width: 100%; height: 4px; appearance: none; border: 0; border-radius: 2px; background: var(--fill2); margin-top: 6px; display: block; }
+  progress::-webkit-progress-bar { background: var(--fill2); border-radius: 2px; }
+  progress::-webkit-progress-value { background: var(--accent); border-radius: 2px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .row-actions { display: flex; gap: 2px; opacity: 0; transition: opacity .12s; }
+  .item:hover .row-actions, .item:focus-within .row-actions { opacity: 1; }
+  dialog { border: 0; border-radius: 14px; padding: 22px; width: 380px; background: var(--card); color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,.3), 0 0 0 1px var(--line); }
+  dialog::backdrop { background: rgba(0,0,0,.25); }
+  dialog[open] { animation: pop .22s var(--ease); }
+  @keyframes pop { from { opacity: 0; transform: scale(.96); } }
+  dialog h4 { margin: 0 0 14px; font-size: 17px; }
+  dialog label { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4px; }
+  dialog input { width: 100%; }
+  dialog .actions { justify-content: flex-end; margin-top: 18px; }
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 9px 16px; border-radius: 20px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #toast.on { opacity: 1; }
+  @media (max-width: 720px) { nav { width: 64px; } nav a span, nav h1 { display: none; } main { padding: 24px 20px 60px; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+<svg style="display:none">
+  <symbol id="i-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.6M8 12.6v1.6M14.2 8h-1.6M3.4 8H1.8M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1M12.4 12.4l-1.1-1.1M4.7 4.7 3.6 3.6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 16 16"><path d="m8 2.5 1.7 3.5 3.8.5-2.8 2.6.7 3.8L8 11.1l-3.4 1.8.7-3.8-2.8-2.6 3.8-.5z"/></symbol>
+  <symbol id="i-dl" viewBox="0 0 16 16"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></symbol>
+  <symbol id="i-puzzle" viewBox="0 0 16 16"><path d="M6 3.5a1.5 1.5 0 0 1 3 0V5h2.5a1 1 0 0 1 1 1v2.5H11a1.5 1.5 0 0 0 0 3h1.5V13a1 1 0 0 1-1 1H9v-1.5a1.5 1.5 0 0 0-3 0V14H3.5a1 1 0 0 1-1-1v-2.5H4a1.5 1.5 0 0 0 0-3H2.5V6a1 1 0 0 1 1-1H6z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 16 16"><path d="m10.5 3 2.5 2.5L6 12.5H3.5V10z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 16 16"><path d="M2.5 4.5a1 1 0 0 1 1-1h3l1.5 1.5h4.5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-reload" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3"/></symbol>
+</svg>
+<nav>
+  <h1>WHOZ</h1>
+  <a href="/settings" data-p="settings"><svg><use href="#i-gear"/></svg><span>Settings</span></a>
+  <a href="/history" data-p="history"><svg><use href="#i-clock"/></svg><span>History</span></a>
+  <a href="/bookmarks" data-p="bookmarks"><svg><use href="#i-star"/></svg><span>Bookmarks</span></a>
+  <a href="/downloads" data-p="downloads"><svg><use href="#i-dl"/></svg><span>Downloads</span></a>
+  <a href="/extensions" data-p="extensions"><svg><use href="#i-puzzle"/></svg><span>Extensions</span></a>
+</nav>
+<main id="main"></main>
+<dialog id="dlg"></dialog>
+<div id="toast"></div>
+<script>
+  const api = async (path, body) => {
+    const r = await fetch('/api/' + path, { method: body === undefined ? 'GET' : 'POST', headers: { 'x-whoz': '1' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'Request failed');
+    return j;
+  };
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const icon = n => `<svg><use href="#i-${n}"/></svg>`;
+  const host = u => { try { return new URL(u).host || u; } catch { return u; } };
+  const main = document.getElementById('main'), dlg = document.getElementById('dlg');
+  let page = location.pathname.slice(1) || 'settings', poll;
+  const toast = t => { const e = document.getElementById('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e.t); e.t = setTimeout(() => e.classList.remove('on'), 2600); };
+  const fail = e => toast(e.message || String(e));
+  const letter = u => `<div class="fav">${esc((host(u).replace(/^www\./, '')[0]) || '•')}</div>`;
+  const sw = (id, on) => `<label class="sw"><input type="checkbox" id="${id}"${on ? ' checked' : ''}><i></i></label>`;
+  const seg = (id, val, opts) => `<div class="seg" id="${id}" role="radiogroup">${opts.map(([v, l]) => `<button role="radio" aria-checked="${v === val}" data-v="${v}" class="${v === val ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`;
+  const item = (label, sub, ctrl, cls = '') => `<div class="item ${cls}"><div class="lbl">${label}${sub ? `<small>${sub}</small>` : ''}</div>${ctrl || ''}</div>`;
+  const ago = t => { const s = (Date.now() - t) / 1000; return s < 60 ? 'just now' : s < 3600 ? Math.floor(s / 60) + ' min ago' : s < 86400 ? Math.floor(s / 3600) + ' h ago' : new Date(t).toLocaleString(); };
+
+  function route(p, push) {
+    page = p.split('#')[0] || 'settings';
+    if (push) history.pushState(null, '', '/' + p);
+    for (const a of document.querySelectorAll('nav a')) a.classList.toggle('on', a.dataset.p === page);
+    clearInterval(poll);
+    ({ settings, history: hist, bookmarks, downloads, extensions }[page] || settings)().then(() => {
+      const h = location.hash.slice(1);
+      if (h) document.getElementById(h)?.scrollIntoView();
+    }).catch(fail);
+  }
+  for (const a of document.querySelectorAll('nav a')) a.onclick = e => { e.preventDefault(); route(a.dataset.p, true); };
+  onpopstate = () => route(location.pathname.slice(1), false);
+
+  // ---------- settings ----------
+  async function settings() {
+    document.title = 'Settings';
+    const st = await api('state'), s = st.settings;
+    const custom = !st.engines.some(e => e[1] === s.search);
+    main.innerHTML = `
+      <h2>Settings</h2><p class="lead">Changes save as you make them.</p>
+      <h3 id="appearance">Appearance</h3><div class="group">
+        ${item('Theme', 'Pages that support it follow this too.', seg('theme', s.theme, [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']]))}
+        ${item('Tabs', 'Vertical tabs in a sidebar, or a row on top.', seg('tabs', s.tabs_left ? 'left' : 'top', [['left', 'Side'], ['top', 'Top']]))}
+        ${item('Auto-hide toolbar and tabs', 'The page fills the window; point at the top or left edge to show them. Ctrl+Shift+B', sw('compact', s.compact))}
+        ${item('Sidebar width', `<span id="sidev">${s.side_w}</span> px. You can also drag the sidebar edge.`, `<input type="range" id="side" min="180" max="480" step="10" value="${s.side_w}">`)}
+      </div>
+      <h3 id="startup">On startup</h3><div class="group">
+        ${item('When Whoz opens', '', seg('startup', s.startup, [['restore', 'Continue where you left off'], ['home', 'Open the home page']]))}
+        ${item('Home page', 'Also opened by Alt+Home and new windows.', `<input type="url" class="wide" id="home" value="${esc(s.home)}">`)}
+      </div>
+      <h3 id="search">Search</h3><div class="group">
+        ${item('Search engine', 'Used by the address bar.', `<select id="engine">${st.engines.map(e => `<option value="${esc(e[1])}"${e[1] === s.search ? ' selected' : ''}>${esc(e[0])}</option>`).join('')}<option value=""${custom ? ' selected' : ''}>Custom…</option></select>`)}
+        <div id="customrow" ${custom ? '' : 'hidden'}>${item('Custom search URL', 'Put %s where the search words go.', `<input type="url" class="wide" id="custom" value="${esc(custom ? s.search : '')}" placeholder="https://example.com/search?q=%s">`)}</div>
+      </div>
+      <h3 id="privacy">Privacy and security</h3><div class="group">
+        ${item('Tracking prevention', 'Balanced blocks trackers from sites you have not visited.', seg('tracking', s.tracking, [['none', 'Off'], ['basic', 'Basic'], ['balanced', 'Balanced'], ['strict', 'Strict']]))}
+        ${item('Offer to save passwords', 'Passwords stay in this profile, encrypted by Windows.', sw('passwords', s.passwords))}
+        ${item('Save and fill addresses and forms', '', sw('autofill', s.autofill))}
+      </div>
+      <h3>Clear browsing data</h3><div class="group">
+        ${item('Time range', '', `<select id="range"><option value="hour">Last hour</option><option value="day">Last 24 hours</option><option value="week">Last 7 days</option><option value="month">Last 4 weeks</option><option value="all" selected>All time</option></select>`)}
+        <div class="checks">${[['history', 'Browsing history', 1], ['downloads', 'Download history', 1], ['cookies', 'Cookies and site data', 1], ['cache', 'Cached images and files', 1], ['passwords', 'Saved passwords', 0], ['autofill', 'Autofill form data', 0]]
+          .map(([k, l, c]) => `<label><input type="checkbox" value="${k}"${c ? ' checked' : ''}>${l}</label>`).join('')}</div>
+        ${item('', 'Cookies and site data sign you out of most sites.', '<button class="danger" id="clear">Clear data</button>')}
+      </div>
+      <h3 id="downloads">Downloads</h3><div class="group">
+        ${item('Location', esc(s.download_dir || st.downloadsDefault), '<div class="actions"><button id="dlreset"' + (s.download_dir ? '' : ' hidden') + '>Use default</button><button id="dldir">Change…</button></div>')}
+      </div>
+      <h3 id="sync">Sync</h3><div class="group">
+        ${item('Sync folder', s.sync_dir ? esc(s.sync_dir) : 'Not set up', '<div class="actions">' + (s.sync_dir ? '<button id="syncoff">Turn off</button>' : '') + '<button id="syncdir"' + (s.sync_dir ? '' : ' class="pri"') + '>' + (s.sync_dir ? 'Change…' : 'Choose folder…') + '</button></div>')}
+        ${s.sync_dir ? item('Status', st.syncError ? `<span class="err">${esc(st.syncError)}</span>` : st.lastSync ? 'Last synced ' + ago(st.lastSync) : 'Not synced yet', '<button id="syncnow">Sync now</button>') : ''}
+      </div>
+      <p class="note">Bookmarks, history and settings sync through a folder your cloud drive already keeps in step, such as OneDrive, Google Drive or Dropbox. Pick the same folder on each PC. Whoz syncs when it starts, when it closes, and when you press Sync now. Chrome's own sync is limited by Google to Chrome itself, so Whoz cannot sign in to it; you can import your Chrome bookmarks below.</p>
+      <h3 id="import">Import and export</h3><div class="group">
+        ${item('Import bookmarks', 'From another browser on this PC.', '<div class="actions"><button data-imp="chrome">Chrome</button><button data-imp="edge">Edge</button><button data-imp="brave">Brave</button></div>')}
+        ${item('Export bookmarks', 'An HTML file that any browser can import.', '<button id="export">Export…</button>')}
+      </div>
+      <h3 id="default">Default browser</h3><div class="group">
+        ${item('Make Whoz your default browser', 'Opens Windows Settings. Whoz shows up there after you run install.ps1.', '<button id="default">Open Windows Settings</button>')}
+      </div>
+      <h3 id="about">About</h3><div class="group">
+        ${item('Whoz ' + esc(st.version), 'Microsoft Edge WebView2 ' + esc(st.engine) + (st.private ? ' · Private window' : ''), '<button id="dev">Developer tools: F12</button>')}
+        ${item('Data folder', esc(st.data), '<button id="data">Open</button>')}
+        ${item('License', 'GNU General Public License v3.0 or later. Source on <a href="https://github.com/afrizalyogi/whoz-browser" style="color:var(--accent)">GitHub</a>.', '')}
+      </div>`;
+    const save = async patch => { try { Object.assign(s, patch); Object.assign(s, await api('settings', s)); } catch (e) { fail(e); } };
+    for (const g of main.querySelectorAll('.seg')) for (const b of g.children) b.onclick = () => {
+      for (const x of g.children) { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }
+      const v = b.dataset.v;
+      save(g.id === 'tabs' ? { tabs_left: v === 'left' } : { [g.id]: v });
+    };
+    for (const k of ['compact', 'passwords', 'autofill']) document.getElementById(k).onchange = e => save({ [k]: e.target.checked });
+    const side = document.getElementById('side');
+    side.oninput = () => document.getElementById('sidev').textContent = side.value;
+    side.onchange = () => save({ side_w: +side.value });
+    document.getElementById('home').onchange = e => save({ home: e.target.value.trim() || 'https://www.google.com' });
+    const engine = document.getElementById('engine');
+    engine.onchange = () => { document.getElementById('customrow').hidden = !!engine.value; if (engine.value) save({ search: engine.value }); };
+    document.getElementById('custom').onchange = e => { if (!e.target.value.includes('%s')) return toast('The address needs %s for the search words.'); save({ search: e.target.value.trim() }); };
+    document.getElementById('clear').onclick = async () => {
+      const what = [...main.querySelectorAll('.checks input:checked')].map(c => c.value);
+      if (!what.length) return toast('Choose what to clear.');
+      const range = document.getElementById('range').value;
+      await api(`clear?range=${range}&what=${what.join(',')}`).catch(fail);
+      toast('Browsing data cleared');
+    };
+    document.getElementById('dldir').onclick = async () => { const p = await api('pick'); if (p) { await save({ download_dir: p }); settings(); } };
+    document.getElementById('dlreset').onclick = async () => { await save({ download_dir: '' }); settings(); };
+    document.getElementById('syncdir').onclick = async () => { const p = await api('pick'); if (p) { await save({ sync_dir: p }); settings(); } };
+    document.getElementById('syncoff')?.addEventListener('click', async () => { await save({ sync_dir: '' }); settings(); });
+    document.getElementById('syncnow')?.addEventListener('click', async () => { try { await api('sync'); toast('Synced'); } catch (e) { fail(e); } settings(); });
+    for (const b of main.querySelectorAll('[data-imp]')) b.onclick = async () => { try { const n = await api('bookmarks/import?from=' + b.dataset.imp); toast(n ? `Imported ${n} bookmarks` : 'No new bookmarks to import'); } catch (e) { fail(e); } };
+    document.getElementById('export').onclick = exportBookmarks;
+    document.getElementById('default').onclick = () => api('default-browser');
+    document.getElementById('data').onclick = () => api('open?path=' + encodeURIComponent(st.data));
+    document.getElementById('dev').onclick = () => toast('Press F12 on any page, or use the ⋯ menu.');
+  }
+
+  async function exportBookmarks() {
+    const html = await api('bookmarks/export');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    a.download = 'whoz-bookmarks.html';
+    a.click();
+  }
+
+  // ---------- history ----------
+  async function hist() {
+    document.title = 'History';
+    main.innerHTML = `<h2>History</h2><p class="lead">Pages you visited, newest first. Private windows are not recorded.</p>
+      <input type="search" class="search" id="hq" placeholder="Search history" autofocus>
+      <div id="hl"></div>
+      <p class="note"><a href="/settings#privacy" id="toclear">Clear browsing data…</a></p>`;
+    document.getElementById('toclear').onclick = e => { e.preventDefault(); history.pushState(null, '', '/settings#privacy'); route('settings#privacy'); };
+    const q = document.getElementById('hq');
+    let t;
+    const draw = async () => {
+      const list = await api('history?n=600&q=' + encodeURIComponent(q.value));
+      const days = new Map();
+      for (const v of list) {
+        const d = new Date(v.time).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        if (!days.has(d)) days.set(d, []);
+        days.get(d).push(v);
+      }
+      document.getElementById('hl').innerHTML = list.length ? [...days].map(([d, vs]) => `<h3>${esc(d)}</h3><div class="group">${vs.map(v =>
+        `<div class="item click" data-u="${esc(v.url)}"><span class="time">${new Date(v.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>${letter(v.url)}
+          <div class="lbl truncate">${esc(v.title || v.url)}<small class="truncate">${esc(host(v.url))}</small></div>
+          <div class="row-actions"><button class="icon" data-del="${v.time}" title="Remove from history">${icon('x')}</button></div></div>`).join('')}</div>`).join('')
+        : `<div class="empty">${q.value ? 'No matches.' : 'Pages you visit show up here.'}</div>`;
+      for (const r of document.querySelectorAll('#hl .item')) r.onclick = e => {
+        const del = e.target.closest('[data-del]');
+        if (del) { e.stopPropagation(); api('history/delete?time=' + del.dataset.del).then(draw); }
+        else location.href = r.dataset.u;
+      };
+    };
+    q.oninput = () => { clearTimeout(t); t = setTimeout(draw, 150); };
+    await draw();
+  }
+
+  // ---------- bookmarks ----------
+  function editBookmark(b, done) {
+    dlg.innerHTML = `<form method="dialog"><h4>${b ? 'Edit bookmark' : 'Add bookmark'}</h4>
+      <label for="bn">Name</label><input type="text" id="bn" value="${esc(b?.title)}">
+      <label for="bu">Address</label><input type="url" id="bu" value="${esc(b?.url)}" required>
+      <label for="bfo">Folder</label><input type="text" id="bfo" value="${esc(b?.folder)}" placeholder="None" list="bfl">
+      <div class="actions"><button value="cancel" formnovalidate>Cancel</button><button class="pri" value="ok">Save</button></div></form>`;
+    dlg.showModal();
+    dlg.onclose = async () => {
+      if (dlg.returnValue !== 'ok') return;
+      try {
+        await api('bookmarks/set', { old: b?.url || '', url: document.getElementById('bu').value, title: document.getElementById('bn').value, folder: document.getElementById('bfo').value });
+        done();
+      } catch (e) { fail(e); }
+    };
+  }
+  async function bookmarks() {
+    document.title = 'Bookmarks';
+    main.innerHTML = `<h2>Bookmarks</h2><p class="lead">Press Ctrl+D or the star in the address bar to bookmark a page.</p>
+      <div class="actions" style="margin-bottom:16px"><button class="pri" id="badd">Add bookmark</button><button id="bimp">Import from Chrome</button><button id="bexp">Export…</button></div>
+      <input type="search" class="search" id="bq" placeholder="Search bookmarks"><div id="bl"></div><datalist id="bfl"></datalist>`;
+    const q = document.getElementById('bq');
+    let all = [];
+    const draw = () => {
+      const f = q.value.toLowerCase();
+      const list = all.filter(b => !f || (b.title + ' ' + b.url + ' ' + b.folder).toLowerCase().includes(f));
+      const folders = new Map();
+      for (const b of list.sort((a, b) => a.folder.localeCompare(b.folder) || b.time - a.time)) {
+        if (!folders.has(b.folder)) folders.set(b.folder, []);
+        folders.get(b.folder).push(b);
+      }
+      document.getElementById('bfl').innerHTML = [...new Set(all.map(b => b.folder).filter(Boolean))].map(f => `<option value="${esc(f)}">`).join('');
+      document.getElementById('bl').innerHTML = list.length ? [...folders].map(([name, bs]) => `<h3>${name ? icon('folder') + ' ' + esc(name) : 'Bookmarks'}</h3><div class="group">${bs.map(b =>
+        `<div class="item click" data-u="${esc(b.url)}">${letter(b.url)}<div class="lbl truncate">${esc(b.title || b.url)}<small class="truncate">${esc(b.url)}</small></div>
+          <div class="row-actions"><button class="icon" data-edit title="Edit">${icon('edit')}</button><button class="icon" data-del title="Delete">${icon('x')}</button></div></div>`).join('')}</div>`).join('')
+        : `<div class="empty">${f ? 'No matches.' : 'No bookmarks yet.'}</div>`;
+      for (const r of document.querySelectorAll('#bl .item')) r.onclick = e => {
+        const b = all.find(x => x.url === r.dataset.u);
+        if (e.target.closest('[data-edit]')) editBookmark(b, load);
+        else if (e.target.closest('[data-del]')) api('bookmarks/delete?url=' + encodeURIComponent(b.url)).then(() => { load(); toast('Bookmark deleted'); });
+        else location.href = b.url;
+      };
+    };
+    const load = async () => { all = await api('bookmarks'); draw(); };
+    q.oninput = draw;
+    document.getElementById('badd').onclick = () => editBookmark(null, load);
+    document.getElementById('bimp').onclick = async () => { try { const n = await api('bookmarks/import?from=chrome'); toast(n ? `Imported ${n} bookmarks` : 'No new bookmarks to import'); load(); } catch (e) { fail(e); } };
+    document.getElementById('bexp').onclick = exportBookmarks;
+    await load();
+  }
+
+  // ---------- downloads ----------
+  const size = n => n < 0 ? '' : n < 1e3 ? n + ' B' : n < 1e6 ? Math.round(n / 1e3) + ' KB' : n < 1e9 ? (n / 1e6).toFixed(1) + ' MB' : (n / 1e9).toFixed(2) + ' GB';
+  async function downloads() {
+    document.title = 'Downloads';
+    main.innerHTML = `<h2>Downloads</h2><p class="lead">Files you downloaded in Whoz. <a href="/settings#downloads" id="dlset">Change the download folder</a>.</p>
+      <div class="actions" style="margin-bottom:16px"><button id="dlclear">Clear list</button></div><div id="dll"></div>`;
+    document.getElementById('dlset').onclick = e => { e.preventDefault(); history.pushState(null, '', '/settings#downloads'); route('settings#downloads'); };
+    document.getElementById('dlclear').onclick = () => api('downloads/action?do=clear&id=0').then(draw);
+    let sig = '';
+    const draw = async () => {
+      const list = await api('downloads');
+      const s = JSON.stringify(list);
+      if (s === sig) return;
+      sig = s;
+      const name = p => p.split(/[\\/]/).pop();
+      document.getElementById('dll').innerHTML = list.length ? `<div class="group">${list.map(d => `<div class="item" data-id="${d.id}">${icon(d.state === 'failed' ? 'x' : 'dl')}
+        <div class="lbl"><span class="truncate" style="display:block">${esc(name(d.path))}</span>
+        ${d.state === 'progress' ? `<progress max="${Math.max(d.total, 1)}" ${d.total > 0 ? `value="${d.bytes}"` : ''}></progress><small>${size(d.bytes)}${d.total > 0 ? ' of ' + size(d.total) : ''}</small>`
+          : `<small class="truncate ${d.state === 'failed' ? 'err' : ''}">${d.state === 'failed' ? 'Failed · ' : size(d.bytes) + ' · '}${esc(host(d.url))} · ${new Date(d.time).toLocaleString()}</small>`}</div>
+        <div class="actions">${d.state === 'progress' ? '<button data-a="cancel">Cancel</button>' : d.state === 'done' ? '<button data-a="open">Open</button><button data-a="show">Show in folder</button>' : '<button data-a="retry">Retry</button>'}
+        <button class="icon" data-a="remove" title="Remove from list">${icon('x')}</button></div></div>`).join('')}</div>` : '<div class="empty">Files you download show up here.</div>';
+      for (const b of document.querySelectorAll('#dll [data-a]')) b.onclick = () => api(`downloads/action?do=${b.dataset.a}&id=${b.closest('.item').dataset.id}`).then(draw);
+    };
+    await draw();
+    poll = setInterval(draw, 1000);
+  }
+
+  // ---------- extensions ----------
+  async function extensions() {
+    document.title = 'Extensions';
+    main.innerHTML = `<h2>Extensions</h2>
+      <p class="lead">Install extensions from the <a href="https://chromewebstore.google.com">Chrome Web Store</a>: open an extension's page and press <b>Add to Whoz</b> in the address bar, or paste its link here.</p>
+      <div class="group">${item('Install from the Chrome Web Store', 'Paste a store link or an extension ID.', '<div class="actions"><input type="url" id="eid" class="wide" placeholder="https://chromewebstore.google.com/detail/…"><button class="pri" id="einst">Install</button></div>')}
+      ${item('Load unpacked', 'A folder that contains manifest.json, for extensions you are building.', '<button id="eload">Choose folder…</button>')}</div>
+      <h3>Installed</h3><div id="el"></div>
+      <p class="note">Extensions run in Microsoft's WebView2 engine. Most content and background features work; some Chrome APIs that need the browser's own window, such as chrome.tabs and side panels, are limited. If an extension misbehaves, turn it off here.</p>`;
+    const draw = async () => {
+      const list = await api('extensions');
+      document.getElementById('el').innerHTML = list.length ? `<div class="group">${list.map(x => `<div class="item" data-id="${esc(x.id)}">
+        ${x.icon ? `<img class="ext-ic" src="${esc(x.icon)}" alt="">` : `<div class="fav ext-ic">${icon('puzzle')}</div>`}
+        <div class="lbl">${esc(x.name)}<small>${esc(x.id)}</small></div>
+        <div class="actions">${x.options ? '<button data-a="options">Options</button>' : ''}<button class="danger" data-a="remove">Remove</button>${sw('t-' + x.id, x.enabled)}</div></div>`).join('')}</div>`
+        : '<div class="empty">No extensions yet.</div>';
+      for (const r of document.querySelectorAll('#el .item')) {
+        const id = r.dataset.id;
+        r.querySelector('input').onchange = e => api(`extensions/toggle?id=${id}&on=${e.target.checked ? 1 : 0}`).then(() => setTimeout(draw, 300));
+        r.querySelector('[data-a=remove]').onclick = () => api('extensions/remove?id=' + id).then(() => { toast('Extension removed'); setTimeout(draw, 300); });
+        r.querySelector('[data-a=options]')?.addEventListener('click', () => api('extensions/options?id=' + id).catch(fail));
+      }
+    };
+    document.getElementById('einst').onclick = async () => {
+      try { await api('extensions/install?id=' + encodeURIComponent(document.getElementById('eid').value)); document.getElementById('eid').value = ''; setTimeout(draw, 4000); }
+      catch (e) { fail(e); }
+    };
+    document.getElementById('eload').onclick = async () => { await api('extensions/load'); setTimeout(draw, 800); };
+    await draw();
+    poll = setInterval(draw, 3000);
+  }
+
+  route(location.pathname.slice(1) + location.hash, false);
+</script>

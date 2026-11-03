@@ -1,0 +1,26 @@
+[package]
+name = "whoz-app"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "whoz"
+path = "src/main.rs"
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+mimalloc.workspace = true
+
+whoz-core = { path = "../whoz-core" }
+whoz-sync = { path = "../whoz-sync" }
+whoz-extensions = { path = "../whoz-extensions" }
+whoz-bridge = { path = "../whoz-bridge" }
+whoz-ui = { path = "../whoz-ui" }

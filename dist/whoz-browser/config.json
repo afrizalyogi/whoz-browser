@@ -1,0 +1,10 @@
+{
+  "max_renderer_processes": 4,
+  "tab_suspend_timeout_secs": 60,
+  "memory_pressure_threshold_mb": 800,
+  "disable_telemetry": true,
+  "use_native_internal_pages": true,
+  "enable_google_sync": true,
+  "user_data_dir": "./data/user_data",
+  "chrome_base_dir": "C:\\Program Files\\Google\\Chrome\\Application"
+}

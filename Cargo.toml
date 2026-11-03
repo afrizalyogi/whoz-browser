@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "crates/chromelite-core",
-    "crates/chromelite-sync",
-    "crates/chromelite-extensions",
-    "crates/chromelite-bridge",
-    "crates/chromelite-ui",
-    "crates/chromelite-app",
+    "crates/whoz-core",
+    "crates/whoz-sync",
+    "crates/whoz-extensions",
+    "crates/whoz-bridge",
+    "crates/whoz-ui",
+    "crates/whoz-app",
 ]
 resolver = "2"
 
@@ -14,7 +14,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Afrizal Yogi <afrizalyogi@aryatama.co.id>"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/afrizalyogi/ay-chromelite"
+repository = "https://github.com/afrizalyogi/whoz-browser"
 
 [workspace.dependencies]
 tokio = { version = "1.43", features = ["full"] }

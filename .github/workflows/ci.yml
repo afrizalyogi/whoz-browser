@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: .\package.ps1
+        shell: pwsh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whoz-browser-windows-x64
+          path: dist/whoz-browser-windows-x64.zip
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/whoz-browser-windows-x64.zip
+          generate_release_notes: true

@@ -5,7 +5,10 @@ edition = "2021"
 authors = ["Afrizal Yogi <afrizalyogi@aryatama.co.id>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/afrizalyogi/whoz-browser"
-description = "Headerless, minimal Windows browser on WebView2"
+description = "A minimal Windows browser: the page fills the window, header and tabs auto-hide"
+readme = "README.md"
+keywords = ["browser", "webview2", "minimal", "windows", "vertical-tabs"]
+categories = ["gui"]
 
 [[bin]]
 name = "whoz"

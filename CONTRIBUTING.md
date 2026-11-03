@@ -30,6 +30,10 @@ Add a unit test for anything that parses, merges or decides (see the `tests` mod
 
 The overlay is clipped with `SetWindowRgn` to the shapes `ui.html` reports in its `rgn` message. A new floating element needs the `pop` class (or its own entry in `clip()`), or it will not show and will not receive clicks.
 
+## Releases
+
+CI runs clippy, tests and `package.ps1` on every push and pull request. To publish a release, bump `version` in `Cargo.toml` and merge to `main`: CI creates the `v<version>` tag and a GitHub release with the zip, `SHA256SUMS.txt` and generated notes. A push that keeps the same version publishes nothing.
+
 ## Pull requests
 
 - One change per pull request.

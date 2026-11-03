@@ -1,0 +1,152 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; font: 12px "Segoe UI", system-ui, sans-serif; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: Canvas; color: CanvasText; user-select: none; cursor: default; }
+  /* Rust shows only the regions clip() reports; everything else is the page underneath. */
+  #h { position: fixed; inset: 0 0 auto 0; height: 36px; display: flex; border-bottom: 1px solid #8884; box-sizing: border-box; }
+  #s { position: fixed; left: 0; top: 36px; bottom: 0; width: 240px; overflow-y: auto; border-right: 1px solid #8884; box-sizing: border-box; padding: 4px; }
+  #m { flex: 1; min-width: 0; display: flex; align-items: center; overflow: hidden; }
+  #title { padding: 0 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; pointer-events: none; }
+  body.top #title, body.top #s { display: none; }
+  button { all: unset; width: 46px; display: grid; place-items: center; font: 10px "Segoe Fluent Icons", "Segoe MDL2 Assets"; }
+  button:hover { background: #8883; }
+  #close:hover { background: #c42b1c; color: #fff; }
+  #rz { position: fixed; inset: 0 0 auto 0; height: 4px; cursor: n-resize; }
+  body.max #rz { display: none; }
+  .t { display: flex; align-items: center; height: 30px; padding-left: 10px; border-radius: 6px; }
+  .t span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .t:hover { background: #8882; }
+  .t.a { background: #8884; }
+  .t i { visibility: hidden; font: normal 9px "Segoe Fluent Icons", "Segoe MDL2 Assets"; width: 28px; align-self: stretch; display: grid; place-items: center; }
+  .t:hover i, .t.a i { visibility: visible; }
+  .t i:hover { background: #8884; border-radius: 6px; }
+  body.top .t { flex: 0 1 200px; min-width: 60px; height: 28px; margin-left: 4px; }
+  #p { display: none; position: fixed; top: 44px; left: 50%; transform: translateX(-50%); width: min(600px, calc(100vw - 32px)); border: 1px solid #8886; box-sizing: border-box; background: Canvas; }
+  #q { all: unset; box-sizing: border-box; width: 100%; height: 46px; padding: 0 14px; font-size: 15px; user-select: text; cursor: text; }
+  #l { max-height: 320px; overflow-y: auto; }
+  #l:not(:empty) { border-top: 1px solid #8884; }
+  #l div { height: 32px; line-height: 32px; padding: 0 14px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #l div.a { box-shadow: inset 3px 0 Highlight; }
+  #l div.s { background: Highlight; color: HighlightText; }
+  #l small { opacity: .6; margin-left: 8px; }
+</style>
+<div id="h">
+  <div id="m"><div id="title"></div></div>
+  <button id="go" title="Address bar (Ctrl+L)">&#xE721;</button>
+  <button id="new" title="New tab (Ctrl+T)">&#xE710;</button>
+  <button id="layout" title="Tabs on the left / on top">&#xE8A9;</button>
+  <button id="min" title="Minimize">&#xE921;</button>
+  <button id="max" title="Maximize">&#xE922;</button>
+  <button id="close" title="Close">&#xE8BB;</button>
+</div>
+<div id="s"></div>
+<div id="rz"></div>
+<div id="p"><input id="q" spellcheck="false" autocomplete="off" placeholder="Search or type URL"><div id="l"></div></div>
+<script>
+  // Rust calls render([{t, a}], tabsLeft, maximized, fullscreen), pal(url, [tab urls]), closePal().
+  // Messages back: "rgn\nx,y,w,h;..." (device px), "tab\ni", "x\ni", "go\ntext", "hide", "ready",
+  // and the header buttons: "new" "pal" "layout" "min" "max" "close" "drag" "resize".
+  const $ = id => document.getElementById(id), post = m => ipc.postMessage(m);
+  const HEAD = 36, SIDE = 240, STRIP = 4;
+  const q = $('q'), l = $('l'), p = $('p');
+  let tabs = [], left = true, full = false, st = 0, showT = 0, hideT, lastRgn;
+  let palOpen = false, shown = [], sel = -1, typed = false, lastDown = 0;
+
+  // st: 0 = only edge strips, 1 = header, 2 = header + sidebar.
+  function clip() {
+    const d = devicePixelRatio, r = [];
+    const add = (x, y, w, h) => r.push([x, y, w, h].map(v => Math.round(v * d)).join(','));
+    if (!full) {
+      add(0, 0, innerWidth, st ? HEAD : STRIP);
+      if (left) add(0, 0, st === 2 ? SIDE : STRIP, innerHeight);
+    }
+    if (palOpen) { const b = p.getBoundingClientRect(); add(b.x, b.y, b.width, b.height); }
+    const s = r.join(';');
+    if (s !== lastRgn) post('rgn\n' + (lastRgn = s));
+  }
+  const set = n => { if (n !== st) { st = n; clip(); } };
+
+  function tabEl(t, i) {
+    const d = document.createElement('div'), s = document.createElement('span'), x = document.createElement('i');
+    d.className = t.a ? 't a' : 't';
+    d.title = s.textContent = t.t;
+    x.innerHTML = '&#xE8BB;';
+    x.onmousedown = e => { e.stopPropagation(); post('x\n' + i); };
+    d.onmousedown = e => post((e.button === 1 ? 'x\n' : 'tab\n') + i);
+    d.append(s, x);
+    return d;
+  }
+
+  window.render = (t, lft, max, fs) => {
+    tabs = t.map((x, i) => ({ ...x, u: tabs[i]?.u ?? '' })); left = lft; full = fs;
+    if (full) st = 0;
+    document.body.className = (left ? '' : 'top') + (max ? ' max' : '');
+    $('max').innerHTML = max ? '&#xE923;' : '&#xE922;';
+    $('max').title = max ? 'Restore' : 'Maximize';
+    $('title').textContent = tabs.find(t => t.a)?.t ?? '';
+    document.querySelectorAll('.t').forEach(e => e.remove());
+    (left ? $('s') : $('m')).append(...tabs.map(tabEl));
+    if (palOpen) draw(); else clip();
+  };
+
+  // Edge strips open panels after a short hover, so passing over them to reach a resize border does not.
+  onmousemove = e => {
+    if (full || p.contains(e.target)) return;
+    clearTimeout(hideT);
+    const want = left && e.clientX <= STRIP && e.clientY > HEAD ? 2 : Math.max(st, 1);
+    if (want === st) { clearTimeout(showT); showT = 0; }
+    else if (!showT) showT = setTimeout(() => { showT = 0; set(want); }, st ? 0 : 150);
+  };
+  document.addEventListener('mouseout', e => {
+    if (e.relatedTarget) return;
+    clearTimeout(showT); showT = 0;
+    hideT = setTimeout(() => set(0), 400);
+  });
+
+  for (const id of ['new', 'layout', 'min', 'max', 'close']) $(id).onclick = () => { if (id === 'min') set(0); post(id); };
+  $('go').onclick = () => post('pal');
+  // The OS drag loop swallows the second click, so detect double-click by time.
+  $('m').onmousedown = e => {
+    if (e.button !== 0 || e.target !== $('m')) return;
+    post(e.timeStamp - lastDown < 500 ? 'max' : 'drag');
+    lastDown = e.timeStamp;
+  };
+  $('rz').onmousedown = e => { if (e.button === 0) post('resize'); };
+  oncontextmenu = e => { if (e.target !== q) e.preventDefault(); };
+  onresize = clip;
+
+  // Address bar: type a URL or search, or filter open tabs and pick one.
+  function draw() {
+    const f = typed ? q.value.toLowerCase() : '';
+    shown = tabs.map((t, i) => [t, i]).filter(([t]) => !f || (t.t + ' ' + t.u).toLowerCase().includes(f));
+    sel = Math.min(sel, shown.length - 1);
+    l.replaceChildren(...shown.map(([t, i], k) => {
+      const d = document.createElement('div'), s = document.createElement('small');
+      d.textContent = t.t;
+      s.textContent = t.u;
+      d.append(s);
+      d.className = (t.a ? 'a ' : '') + (k === sel ? 's' : '');
+      d.onmousedown = e => { e.preventDefault(); post('tab\n' + i); };
+      return d;
+    }));
+    l.querySelector('.s')?.scrollIntoView({ block: 'nearest' });
+    clip();
+  }
+  window.pal = (url, urls) => { urls.forEach((u, i) => tabs[i] && (tabs[i].u = u)); palOpen = true; p.style.display = 'block'; sel = -1; typed = false; q.value = url; draw(); q.focus(); q.select(); };
+  window.closePal = () => { if (palOpen) { palOpen = false; p.style.display = ''; clip(); } };
+  const dismiss = () => { if (palOpen) { closePal(); post('hide'); } };
+  // Clicking the page moves focus out of this view; clicks inside it (header, tabs) keep the bar open.
+  addEventListener('blur', dismiss);
+  q.oninput = () => { typed = true; sel = -1; draw(); };
+  q.onkeydown = e => {
+    if (e.key === 'Escape') dismiss();
+    else if (e.key === 'Enter') post(sel >= 0 ? 'tab\n' + shown[sel][1] : 'go\n' + q.value);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      sel = Math.max(-1, Math.min(shown.length - 1, sel + (e.key === 'ArrowDown' ? 1 : -1)));
+      draw();
+    } else return;
+    e.preventDefault();
+  };
+  post('ready');
+</script>

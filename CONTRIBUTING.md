@@ -28,7 +28,7 @@ The overlay is clipped with `SetWindowRgn` to the rectangles `ui.html` reports i
 
 - One change per pull request.
 - `cargo test` and `cargo clippy --all-targets -- -D warnings` pass.
-- Say how you tested it by hand (which pages, which shortcuts).
+- Say how you tested it by hand. `scripts\manual-test.ps1` walks through every check and writes a report you can paste into the pull request.
 - Screenshots or a short GIF for anything visual.
 
 By contributing you agree your work is dual-licensed under MIT and Apache-2.0, like the rest of the project.

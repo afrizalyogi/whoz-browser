@@ -37,7 +37,8 @@ jobs:
       - id: version
         shell: pwsh
         run: |
-          $v = (Select-String Cargo.toml '^version = "(.+)"').Matches[0].Groups[1].Value
+          $v = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"(.+)"').Matches[0].Groups[1].Value
+          if (-not $v) { throw 'No version in lite/Cargo.toml' }
           "version=$v" >> $env:GITHUB_OUTPUT
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test

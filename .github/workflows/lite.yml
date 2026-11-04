@@ -1,19 +1,25 @@
-name: CI
+name: Whoz Lite
 
-# Every push and pull request is checked and packaged.
-# A push to main whose Cargo.toml version has no release yet publishes v<version> automatically.
+# Whoz Lite (the WebView2 build in lite/) is checked and packaged on every change to lite/.
+# A push to main whose lite/Cargo.toml version has no release yet publishes lite-v<version>.
 on:
   push:
     branches: [main]
+    paths: ['lite/**', '.github/workflows/lite.yml']
   pull_request:
+    paths: ['lite/**', '.github/workflows/lite.yml']
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: lite-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    working-directory: lite
 
 jobs:
   build:
@@ -26,6 +32,8 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: lite
       - id: version
         shell: pwsh
         run: |
@@ -39,13 +47,14 @@ jobs:
         shell: pwsh
         run: |
           $h = (Get-FileHash dist/whoz-browser-windows-x64.zip -Algorithm SHA256).Hash.ToLower()
-          "$h  whoz-browser-windows-x64.zip" | Set-Content dist/SHA256SUMS.txt -NoNewline
+          "$h  whoz-lite-windows-x64.zip" | Set-Content dist/SHA256SUMS.txt -NoNewline
+          Move-Item dist/whoz-browser-windows-x64.zip dist/whoz-lite-windows-x64.zip
       - uses: actions/upload-artifact@v7
         with:
-          name: whoz-browser-windows-x64
+          name: whoz-lite-windows-x64
           path: |
-            dist/whoz-browser-windows-x64.zip
-            dist/SHA256SUMS.txt
+            lite/dist/whoz-lite-windows-x64.zip
+            lite/dist/SHA256SUMS.txt
           if-no-files-found: error
 
   release:
@@ -54,25 +63,28 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    defaults:
+      run:
+        working-directory: .
     env:
       GH_TOKEN: ${{ github.token }}
-      TAG: v${{ needs.build.outputs.version }}
+      TAG: lite-v${{ needs.build.outputs.version }}
     steps:
       - name: Skip if this version is already released
         id: check
         run: |
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "new=false" >> "$GITHUB_OUTPUT"
-            echo "$TAG already released; bump the version in Cargo.toml to publish a new one."
+            echo "$TAG already released; bump the version in lite/Cargo.toml to publish a new one."
           else
             echo "new=true" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.check.outputs.new == 'true'
         uses: actions/download-artifact@v8
         with:
-          name: whoz-browser-windows-x64
+          name: whoz-lite-windows-x64
           path: dist
       - if: steps.check.outputs.new == 'true'
         run: |
-          gh release create "$TAG" dist/whoz-browser-windows-x64.zip dist/SHA256SUMS.txt \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Whoz $TAG" --generate-notes
+          gh release create "$TAG" dist/whoz-lite-windows-x64.zip dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Whoz Lite ${TAG#lite-}" --generate-notes

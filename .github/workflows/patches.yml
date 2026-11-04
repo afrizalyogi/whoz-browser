@@ -1,0 +1,23 @@
+name: Patches
+
+# Checks that every file in patches/series exists and the series is ordered correctly.
+on:
+  push:
+    paths: ['patches/**', 'helium-chromium', '.github/workflows/patches.yml']
+  pull_request:
+    paths: ['patches/**', 'helium-chromium', '.github/workflows/patches.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - run: ./helium-chromium/devutils/lint.py -t .

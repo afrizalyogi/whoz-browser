@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: monthly
   - package-ecosystem: cargo
-    directory: /
+    directory: /lite
     schedule:
       interval: monthly
     groups:

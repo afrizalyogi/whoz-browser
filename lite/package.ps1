@@ -10,7 +10,7 @@ $out = "dist\whoz-browser"
 Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory $out -Force | Out-Null
 Copy-Item target\release\whoz.exe $out
-Copy-Item README.md, LICENSE $out
+Copy-Item README.md, ..\LICENSE $out
 
 Set-Content "$out\install.ps1" @'
 # Installs Whoz for the current user: no admin rights needed.

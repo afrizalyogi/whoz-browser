@@ -1,2 +1,8 @@
-/target
-/dist
+/build
+/.gcs_entries
+__pycache__
+/resources/generated
+/bench/results
+/lite/target
+/lite/dist
+

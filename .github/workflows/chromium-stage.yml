@@ -1,0 +1,48 @@
+name: Whoz (Chromium) stage
+# One link in the build chain. A free runner stops after 6 hours, so build.py stops itself
+# before that and this job saves the build tree as an artifact for the next stage.
+on:
+  workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
+      runs-on:
+        required: true
+        type: string
+      from-artifact:
+        required: true
+        type: boolean
+    outputs:
+      finished:
+        value: ${{ jobs.build.outputs.finished }}
+      version:
+        value: ${{ jobs.build.outputs.version }}
+permissions:
+  contents: read
+env:
+  HELIUM_BUILD_JOBS: ${{ vars.HELIUM_BUILD_JOBS }}
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 360
+    outputs:
+      finished: ${{ steps.stage.outputs.finished }}
+      version: ${{ steps.package.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/prepare-environment
+      - uses: ./.github/actions/stage
+        id: stage
+        with:
+          arm: ${{ inputs.arch == 'arm64' }}
+          from_artifact: ${{ inputs.from-artifact }}
+          package_here: true
+      - uses: ./.github/actions/package
+        id: package
+        if: steps.stage.outputs.package_here == 'true'
+        with:
+          from_artifact: false
+          arch: ${{ inputs.arch }}

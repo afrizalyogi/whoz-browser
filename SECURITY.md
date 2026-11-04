@@ -1,13 +1,13 @@
 # Security policy
 
-Whoz is a thin shell around the Microsoft Edge WebView2 runtime. Two kinds of issues:
+This policy covers both editions. **Whoz** is a Chromium build: engine bugs that also affect Chrome go to the [Chromium security team](https://www.chromium.org/Home/chromium-security/reporting-security-bugs/); bugs in our patches come to us (below). **Whoz Lite** is a thin shell around the Microsoft Edge WebView2 runtime. For Whoz Lite there are two kinds of issues:
 
 - **Engine bugs** (rendering, JavaScript, sandbox escapes): these are in WebView2. Report them to Microsoft through the [Microsoft Security Response Center](https://msrc.microsoft.com/). WebView2 updates itself with Windows.
 - **Whoz bugs** (for example a web page able to trigger Whoz commands, navigate tabs, or read another tab's data): report them privately through [GitHub Security Advisories](https://github.com/afrizalyogi/whoz-browser/security/advisories/new). Please do not open a public issue.
 
 We aim to reply within 7 days and to ship a fix for confirmed issues as soon as we can.
 
-## What Whoz does to limit risk
+## What Whoz Lite does to limit risk
 
 - Web pages can send exactly one message to Whoz (`drag`, to move the window). Toolbar commands are accepted only from the built-in `ui.html` view.
 - `whoz://` pages (settings, history, bookmarks, downloads, extensions) talk to Whoz through `https://whoz.localhost/api/`. Requests need an `x-whoz` header, which forces a CORS preflight that Whoz never approves, and a matching `Origin`, so other sites cannot call it. Whoz pages refuse to be framed.

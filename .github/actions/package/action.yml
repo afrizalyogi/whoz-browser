@@ -1,0 +1,47 @@
+name: Package Windows build
+description: Finish the build, create the unsigned installer and portable zip, and upload them
+inputs:
+  from_artifact:
+    description: Restore the build tree from a previous job
+    default: true
+  arch:
+    description: Target architecture (x86_64 or arm64)
+    required: true
+outputs:
+  version:
+    description: Version of the packaged build
+    value: ${{ steps.upload.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - name: Run Stage
+      uses: ./.github/actions/stage
+      id: stage
+      with:
+        arm: ${{ inputs.arch == 'arm64' }}
+        from_artifact: ${{ inputs.from_artifact }}
+        save_artifact: false
+
+    - name: Check build completed
+      if: steps.stage.outputs.finished != 'true'
+      shell: pwsh
+      run: throw 'Build did not finish within the available stages'
+
+    # Unsigned: Windows SmartScreen may warn on first run.
+    - name: Package
+      id: release
+      shell: pwsh
+      working-directory: C:\helium-windows
+      run: |
+        python package.py --output-dir build\artifacts
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        "artifacts=C:\helium-windows\build\artifacts" >> $env:GITHUB_OUTPUT
+
+    - name: Upload packages
+      id: upload
+      uses: ./.github/actions/stage
+      with:
+        upload_final: true
+        final_directory: ${{ steps.release.outputs.artifacts }}
+        arm: ${{ inputs.arch == 'arm64' }}
+        from_artifact: false

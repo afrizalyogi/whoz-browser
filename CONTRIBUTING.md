@@ -8,7 +8,12 @@ Thanks for helping. Whoz stays useful by staying small, so the bar for new code 
 - **Feature?** Open an issue first and describe the problem it solves. Features that add always-visible UI are unlikely to be accepted.
 - **Small fix** (typo, obvious bug)? Send a pull request directly.
 
-## Development
+## Two editions
+
+- **Whoz** (repository root): a Chromium build. Changes are patches in `patches/`, listed in `patches/series`. Build with `python build.py` (see the README for requirements) or run the **Whoz (Chromium)** workflow on your fork. Any change meant to save memory or CPU needs before/after numbers from `bench\bench.ps1` in the pull request.
+- **Whoz Lite** (`lite/`): the WebView2 edition in Rust. The rest of this guide covers it; run the commands below inside `lite/`.
+
+## Development (Whoz Lite)
 
 ```powershell
 cargo run                 # debug build, keeps a console for eprintln! output
@@ -32,7 +37,9 @@ The overlay is clipped with `SetWindowRgn` to the shapes `ui.html` reports in it
 
 ## Releases
 
-CI runs clippy, tests and `package.ps1` on every push and pull request. To publish a release, bump `version` in `Cargo.toml` and merge to `main`: CI creates the `v<version>` tag and a GitHub release with the zip, `SHA256SUMS.txt` and generated notes. A push that keeps the same version publishes nothing.
+Whoz Lite: CI runs clippy, tests and `package.ps1` on every change to `lite/`. To publish a release, bump `version` in `lite/Cargo.toml` and merge to `main`: CI creates the `lite-v<version>` tag and a GitHub release with the zip, `SHA256SUMS.txt` and generated notes. A push that keeps the same version publishes nothing.
+
+Whoz: the **Whoz (Chromium)** workflow is started by hand and takes many hours. With *Publish a pre-release* ticked it publishes `v<version>` as an unsigned pre-release.
 
 ## Pull requests
 

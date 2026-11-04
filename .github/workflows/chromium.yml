@@ -1,0 +1,53 @@
+name: Whoz (Chromium)
+# Builds Whoz from Chromium + the Helium patch set + patches/ in this repo.
+# A full build takes many hours across chained runners, so it only runs when started by hand:
+# Actions > Whoz (Chromium) > Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        required: false
+        description: Runner image
+        default: windows-2025
+      do-release:
+        required: false
+        type: boolean
+        description: Publish a pre-release when the build is done
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chromium
+  cancel-in-progress: false
+
+jobs:
+  build:
+    uses: ./.github/workflows/chromium-steps.yml
+    with:
+      arch: x86_64
+      runs-on: ${{ inputs.runner }}
+
+  release:
+    needs: build
+    if: ${{ inputs.do-release }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: whoz-x86_64
+          path: dist
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum whoz* > SHA256SUMS.txt
+      - name: Publish pre-release
+        run: |
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Whoz $TAG (preview)" --prerelease --generate-notes \
+            --notes "Unsigned preview build. Windows SmartScreen may warn on first run."

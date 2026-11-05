@@ -1,1 +1,4 @@
-*.patch linguist-language=C++
+*.patch linguist-language=C++ text eol=lf
+patches/series text eol=lf
+*.gn text eol=lf
+*.ini text eol=lf

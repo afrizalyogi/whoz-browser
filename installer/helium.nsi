@@ -22,10 +22,10 @@
 !include "FileFunc.nsh"
 
 ; --- Product Information ---
-!define PRODUCT_NAME "Helium"
-!define PRODUCT_PUBLISHER "imput"
-!define PRODUCT_COMPANY_PATH "imput"
-!define PRODUCT_GUID "{FB68A146-637A-48C2-A0C4-1565DE45FEBD}"
+!define PRODUCT_NAME "Whoz"
+!define PRODUCT_PUBLISHER "PT Aryatama Teknologi Digital"
+!define PRODUCT_DIR "Whoz"
+!define PRODUCT_GUID "{F8C5226B-0DBC-4D17-B226-FE8315A559B8}"
 
 ; --- Installer Configuration ---
 Name "${PRODUCT_NAME} ${VERSION}"
@@ -81,7 +81,7 @@ VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
 VIAddVersionKey "FileDescription" "${PRODUCT_NAME} Installer"
 VIAddVersionKey "FileVersion" "${VERSION}"
-VIAddVersionKey "LegalCopyright" "Copyright The Helium Authors"
+VIAddVersionKey "LegalCopyright" "Copyright The Whoz and Helium Authors"
 
 ; =============================================================================
 ; Custom Install Type Page
@@ -167,7 +167,7 @@ Function .onInit
 
   ; Check for existing system-wide installation
   StrCpy $SystemInstallExists "0"
-  ${If} ${FileExists} "$PROGRAMFILES64\${PRODUCT_COMPANY_PATH}\${PRODUCT_NAME}\Application\chrome.exe"
+  ${If} ${FileExists} "$PROGRAMFILES64\${PRODUCT_DIR}\Application\chrome.exe"
     StrCpy $SystemInstallExists "1"
     StrCpy $InstallType "system"
   ${EndIf}
@@ -327,8 +327,8 @@ SectionEnd
 
 Function LaunchHelium
   ${If} $InstallType == "system"
-    Exec '"$PROGRAMFILES64\${PRODUCT_COMPANY_PATH}\${PRODUCT_NAME}\Application\chrome.exe"'
+    Exec '"$PROGRAMFILES64\${PRODUCT_DIR}\Application\chrome.exe"'
   ${Else}
-    Exec '"$LOCALAPPDATA\${PRODUCT_COMPANY_PATH}\${PRODUCT_NAME}\Application\chrome.exe"'
+    Exec '"$LOCALAPPDATA\${PRODUCT_DIR}\Application\chrome.exe"'
   ${EndIf}
 FunctionEnd

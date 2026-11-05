@@ -12,6 +12,7 @@
 Helium build script for Windows
 """
 
+import re
 import sys
 import time
 import argparse
@@ -32,7 +33,16 @@ import replace_resources
 import prune_binaries
 import patches
 from _common import ENCODING, USE_REGISTRY, ExtractorEnum, get_logger
+import name_substitution_utils
 sys.path.pop(0)
+
+# Whoz branding: user-visible strings say "Whoz" instead of "Chrome"/"Chromium".
+# The helium:// URL scheme stays because Helium's C++ patches hardcode it.
+name_substitution_utils.REPLACEMENT_REGEXES = [
+    (re.compile(pattern), 'Whoz' if replacement == 'Helium' else replacement)
+    for pattern, replacement in name_substitution_utils.REPLACEMENT_REGEXES_STR
+]
+name_substitution.replacement_sanity = lambda: None
 
 _ROOT_DIR = Path(__file__).resolve().parent
 _PATCH_BIN_RELPATH = Path('third_party/git/usr/bin/patch.exe')

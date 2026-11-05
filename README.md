@@ -42,12 +42,18 @@ What Whoz will not claim: to be faster than Chrome at running one page. Same eng
 |---|---|
 | 1. Benchmark harness ([`bench/`](bench/)) | Done: memory, idle CPU, startup, Speedometer 3.1, median of runs, pass/fail gate |
 | 2. Baseline Chromium build in GitHub Actions | Set up; first build pending |
-| 3. Resource patches, each one measured | Next |
-| 4. Whoz interface (auto-hide toolbar, vertical tabs, branding) | Planned |
+| 3. Resource patches, each one measured | First set written ([`patches/whoz/memory-defaults.patch`](patches/whoz/memory-defaults.patch)); not measured yet |
+| 4. Whoz interface (auto-hide toolbar, vertical tabs, branding) | Defaults and name written ([`patches/whoz/`](patches/whoz/)); first build pending |
 | 5. Sync server | Planned |
 | 6. Releases with automatic updates | Planned |
 
-Until step 4, builds still carry Helium's name and look.
+### What the Whoz patches change
+
+- **Interface:** starts in Helium's zen layout with vertical tabs. The page fills the window, the toolbar slides in when you point at the top edge, and the tab sidebar stays pinned on the left. Turn either off in Settings > Appearance.
+- **Name:** the app, installer, folders (`%LOCALAPPDATA%\Whoz`) and Windows registration say Whoz, with new GUIDs, so Whoz installs next to Helium or Chromium without clashing. Internal pages still use `helium://` addresses.
+- **Memory:** Memory Saver on its most aggressive setting; background tabs are frozen early when the PC is low on memory; tabs are discarded before Windows runs out of commit memory; no spare renderer process is kept warm.
+
+Each memory change is a guess until `bench.ps1` measures it against Chrome. Any change that does not help gets removed.
 
 ## How it is built
 

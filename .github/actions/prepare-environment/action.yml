@@ -20,6 +20,15 @@ runs:
     - name: Init
       shell: pwsh
       run: Copy-Item -Path . -Destination "C:\helium-windows" -Recurse
+    # The build tree fills most of C:, so the stage zip goes to the drive with the most free space.
+    - name: Pick artifact drive
+      shell: pwsh
+      run: |
+        Get-PSDrive -PSProvider FileSystem | Format-Table Name, @{n='FreeGB';e={[math]::Round($_.Free/1GB)}}, @{n='UsedGB';e={[math]::Round($_.Used/1GB)}}
+        $d = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -in 'C','D' -and $_.Free } | Sort-Object Free -Descending | Select-Object -First 1
+        $dir = if ($d.Name -eq 'C') { 'C:\whoz-artifact' } else { "$($d.Name):\whoz-artifact" }
+        New-Item -ItemType Directory $dir -Force | Out-Null
+        "WHOZ_ARTIFACT_DIR=$dir" >> $env:GITHUB_ENV
     - name: Set up Node.js 24
       uses: actions/setup-node@v4
       with:

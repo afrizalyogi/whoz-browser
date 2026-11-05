@@ -20,12 +20,14 @@ async function run() {
 
     const artifact = new DefaultArtifactClient();
     const artifactName = arm ? 'build-artifact-arm64' : 'build-artifact-x86_64';
+    // Kept off C: when possible: the build tree and its zip do not both fit there.
+    const artifactDir = process.env.WHOZ_ARTIFACT_DIR || 'C:\\helium-windows';
+    const artifactZip = path.join(artifactDir, 'artifacts.zip');
     if (from_artifact && !upload_final) {
         const artifactInfo = await artifact.getArtifact(artifactName);
-        await artifact.downloadArtifact(artifactInfo.artifact.id, {path: 'C:\\helium-windows\\build'});
-        await exec.exec('7z', ['x', 'C:\\helium-windows\\build\\artifacts.zip',
-            '-oC:\\helium-windows\\build', '-y']);
-        await io.rmRF('C:\\helium-windows\\build\\artifacts.zip');
+        await artifact.downloadArtifact(artifactInfo.artifact.id, {path: artifactDir});
+        await exec.exec('7z', ['x', artifactZip, '-oC:\\helium-windows\\build', '-y']);
+        await io.rmRF(artifactZip);
     }
 
     const args = ['build.py', '--ci', String(started_at)]
@@ -98,8 +100,10 @@ async function run() {
     core.setOutput('package_here', package_here);
 
     if (!package_here && core.getBooleanInput('save_artifact')) {
-        await exec.exec('7z', ['a', '-tzip', 'C:\\helium-windows\\artifacts.zip',
+        // 7z exit 1 means warnings (files it could not read), which the old flow accepted too.
+        const zipCode = await exec.exec('7z', ['a', '-tzip', artifactZip,
             'C:\\helium-windows\\build\\src', '-mx=3', '-mtc=on'], {ignoreReturnCode: true});
+        if (zipCode > 1) throw new Error(`7z failed with exit code ${zipCode}`);
         for (let i = 0; i < 5; ++i) {
             try {
                 await artifact.deleteArtifact(artifactName);
@@ -107,11 +111,12 @@ async function run() {
                 // ignored
             }
             try {
-                await artifact.uploadArtifact(artifactName, ['C:\\helium-windows\\artifacts.zip'],
-                    'C:\\helium-windows', { retentionDays: 4, compressionLevel: 0 });
+                await artifact.uploadArtifact(artifactName, [artifactZip],
+                    artifactDir, { retentionDays: 4, compressionLevel: 0 });
                 break;
             } catch (e) {
                 console.error(`Upload artifact failed: ${e}`);
+                if (i === 4) throw e;
                 // Wait 10 seconds between the attempts
                 await new Promise(r => setTimeout(r, 10000));
             }

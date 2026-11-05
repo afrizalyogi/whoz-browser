@@ -6,3 +6,10 @@ __pycache__
 /lite/target
 /lite/dist
 
+# Secrets: never commit
+.env
+.env.*
+*.pem
+*.pfx
+*.p12
+*.key

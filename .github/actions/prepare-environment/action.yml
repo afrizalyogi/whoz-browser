@@ -17,18 +17,16 @@ runs:
         Invoke-WebRequest 'https://go.microsoft.com/fwlink/?linkid=2370315' -OutFile "$env:RUNNER_TEMP\winsdksetup.exe"
         $installer = Start-Process "$env:RUNNER_TEMP\winsdksetup.exe" -ArgumentList '/quiet', '/norestart', '/features', '+' -Wait -PassThru
         if ($installer.ExitCode -notin @(0, 3010)) { throw "Windows SDK installation failed: $($installer.ExitCode)" }
+    # C: has about 25 GB free on hosted runners; D: has about 220 GB. The source
+    # tree, build outputs and stage zip all go to the drive with the most free space.
     - name: Init
-      shell: pwsh
-      run: Copy-Item -Path . -Destination "C:\helium-windows" -Recurse
-    # The build tree fills most of C:, so the stage zip goes to the drive with the most free space.
-    - name: Pick artifact drive
       shell: pwsh
       run: |
         Get-PSDrive -PSProvider FileSystem | Format-Table Name, @{n='FreeGB';e={[math]::Round($_.Free/1GB)}}, @{n='UsedGB';e={[math]::Round($_.Used/1GB)}}
         $d = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -in 'C','D' -and $_.Free } | Sort-Object Free -Descending | Select-Object -First 1
-        $dir = if ($d.Name -eq 'C') { 'C:\whoz-artifact' } else { "$($d.Name):\whoz-artifact" }
-        New-Item -ItemType Directory $dir -Force | Out-Null
-        "WHOZ_ARTIFACT_DIR=$dir" >> $env:GITHUB_ENV
+        $root = "$($d.Name):\helium-windows"
+        Copy-Item -Path . -Destination $root -Recurse
+        "WHOZ_ROOT=$root" >> $env:GITHUB_ENV
     - name: Set up Node.js 24
       uses: actions/setup-node@v4
       with:

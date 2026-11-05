@@ -31,11 +31,11 @@ runs:
     - name: Package
       id: release
       shell: pwsh
-      working-directory: C:\helium-windows
+      working-directory: ${{ env.WHOZ_ROOT }}
       run: |
         python package.py --output-dir build\artifacts
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
-        "artifacts=C:\helium-windows\build\artifacts" >> $env:GITHUB_OUTPUT
+        "artifacts=$env:WHOZ_ROOT\build\artifacts" >> $env:GITHUB_OUTPUT
 
     - name: Upload packages
       id: upload

@@ -20,13 +20,14 @@ async function run() {
 
     const artifact = new DefaultArtifactClient();
     const artifactName = arm ? 'build-artifact-arm64' : 'build-artifact-x86_64';
-    // Kept off C: when possible: the build tree and its zip do not both fit there.
-    const artifactDir = process.env.WHOZ_ARTIFACT_DIR || 'C:\\helium-windows';
-    const artifactZip = path.join(artifactDir, 'artifacts.zip');
+    // Set by prepare-environment: the drive with the most free space (D: on hosted runners).
+    const root = process.env.WHOZ_ROOT || 'C:\\helium-windows';
+    const buildDir = path.join(root, 'build');
+    const artifactZip = path.join(root, 'artifacts.zip');
     if (from_artifact && !upload_final) {
         const artifactInfo = await artifact.getArtifact(artifactName);
-        await artifact.downloadArtifact(artifactInfo.artifact.id, {path: artifactDir});
-        await exec.exec('7z', ['x', artifactZip, '-oC:\\helium-windows\\build', '-y']);
+        await artifact.downloadArtifact(artifactInfo.artifact.id, {path: root});
+        await exec.exec('7z', ['x', artifactZip, '-o' + buildDir, '-y']);
         await io.rmRF(artifactZip);
     }
 
@@ -81,11 +82,11 @@ async function run() {
     }
 
     await exec.exec('python', ['-m', 'pip', 'install', 'requests', 'Pillow'], {
-        cwd: 'C:\\helium-windows',
+        cwd: root,
         ignoreReturnCode: true
     });
     const retCode = await exec.exec('python', args, {
-        cwd: 'C:\\helium-windows',
+        cwd: root,
         ignoreReturnCode: true
     });
 
@@ -102,7 +103,7 @@ async function run() {
     if (!package_here && core.getBooleanInput('save_artifact')) {
         // 7z exit 1 means warnings (files it could not read), which the old flow accepted too.
         const zipCode = await exec.exec('7z', ['a', '-tzip', artifactZip,
-            'C:\\helium-windows\\build\\src', '-mx=3', '-mtc=on'], {ignoreReturnCode: true});
+            path.join(buildDir, 'src'), '-mx=3', '-mtc=on'], {ignoreReturnCode: true});
         if (zipCode > 1) throw new Error(`7z failed with exit code ${zipCode}`);
         for (let i = 0; i < 5; ++i) {
             try {
@@ -112,7 +113,7 @@ async function run() {
             }
             try {
                 await artifact.uploadArtifact(artifactName, [artifactZip],
-                    artifactDir, { retentionDays: 4, compressionLevel: 0 });
+                    root, { retentionDays: 4, compressionLevel: 0 });
                 break;
             } catch (e) {
                 console.error(`Upload artifact failed: ${e}`);
